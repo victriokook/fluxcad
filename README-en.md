@@ -6,7 +6,13 @@
 
 **0.1.0-alpha** is an initial preview for testing and feedback. FluxCAD is an independent project, not an official product of Autodesk or the FreeCAD project. FreeCAD must be installed separately.
 
-![Included FluxCAD sample: plate with holes](docs/images/sample.png)
+## 59-second demo
+
+[![Watch the FluxCAD demo: from sketch to solid](docs/images/demo-video.jpg)](https://www.youtube.com/watch?v=TVqF2vXXdVI)
+
+**[Watch the demo on YouTube (59 seconds, Japanese captions)](https://www.youtube.com/watch?v=TVqF2vXXdVI)**
+
+See real operations: create a rectangular sketch, select a region, extrude it, add a hole and fillets, then rotate the model with the view cube.
 
 ## Start
 

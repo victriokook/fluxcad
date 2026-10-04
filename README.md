@@ -6,7 +6,13 @@
 
 現在のバージョンは **0.1.0-alpha**。試用・フィードバック向けの初回公開版です。FreeCAD本体を別途使用する独立したプロジェクトで、AutodeskやFreeCADプロジェクトの公式製品ではありません。
 
-![FluxCADの付属サンプル：穴のあるプレート](docs/images/sample.png)
+## 59秒の操作デモ
+
+[![FluxCADの操作デモを見る：スケッチから、立体へ](docs/images/demo-video.jpg)](https://www.youtube.com/watch?v=TVqF2vXXdVI)
+
+**[YouTubeで操作デモを見る（59秒・日本語字幕）](https://www.youtube.com/watch?v=TVqF2vXXdVI)**
+
+長方形スケッチから、領域の選択・押し出し・穴・フィレット・ビューキューブでの回転まで、実際の操作を紹介しています。
 
 ## はじめる
 
