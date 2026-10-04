@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:freecad="http://www.freecadweb.org/wiki/index.php?title=Svg_Namespace" width="420mm" height="297mm" viewBox="0 0 420 297">
+<rect width="420" height="297" fill="#fff" stroke="none"/>
+<g fill="none" stroke="#000" stroke-width="0.35"><rect x="10" y="10" width="400" height="277"/>
+<path d="M 273 287 V 262 H 410 M 273 276 H 410 M 333 276 V 287 M 378 276 V 287"/></g>
+<g font-family="sans-serif" fill="#000">
+<text x="276" y="266" font-size="2.2">TITLE</text>
+<text x="276" y="272" font-size="4" freecad:editable="title"><tspan>Drawing</tspan></text>
+<text x="276" y="279" font-size="2.2">SCALE</text>
+<text x="276" y="284" font-size="3" freecad:editable="scale"><tspan>1 : 1</tspan></text>
+<text x="336" y="279" font-size="2.2">PROJECTION</text>
+<text x="336" y="284" font-size="3" freecad:editable="projection"><tspan>Third Angle</tspan></text>
+<text x="381" y="279" font-size="2.2">SHEET</text>
+<text x="381" y="284" font-size="3" freecad:editable="sheet"><tspan>1 / 1</tspan></text>
+</g></svg>

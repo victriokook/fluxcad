@@ -1,0 +1,126 @@
+"""Exercise this checkout only, inside a separate nonactivating FreeCAD process."""
+import os,sys,json,traceback,math
+from pathlib import Path
+root=Path(__file__).resolve().parents[1]
+output=Path(os.environ['FLUXCAD_TEST_OUTPUT'])
+language=os.environ.get('FLUXCAD_TEST_LANGUAGE','ja')
+sys.path.insert(0,str(root))
+import FreeCAD as App,FreeCADGui as Gui,Part
+from PySide import QtCore,QtGui,QtWidgets as W
+main=Gui.getMainWindow()
+main.hide();main.setWindowOpacity(0)
+main.setWindowFlag(QtCore.Qt.WindowTransparentForInput,True)
+main.setWindowFlag(QtCore.Qt.WindowDoesNotAcceptFocus,True)
+main.setAttribute(QtCore.Qt.WA_ShowWithoutActivating,True)
+main.resize(1440,900)
+App.ParamGet('User parameter:BaseApp/Preferences/FluxCAD').SetString('Language',language)
+App.ParamGet('User parameter:BaseApp/Preferences/General').SetString('Language','English' if language=='en' else 'Japanese')
+checks=[];ws=None;opened=[]
+
+def finish(error=None):
+    report=dict(status='FAIL' if error else 'PASS',language=language,version=App.Version(),checks=checks,error=error)
+    (output/'report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
+    if ws:
+        if ws.current_sketch():Gui.activeDocument().resetEdit()
+        ws.restore()
+    for name in opened:
+        if name in App.listDocuments():App.closeDocument(name)
+    main.close()
+
+def run():
+    global ws,s,baseline
+    try:
+        macro=root/'FluxCAD.FCMacro'
+        exec(compile(macro.read_text(encoding='utf-8-sig'),str(macro),'exec'),{'__file__':str(macro),'__name__':'__main__'})
+        ws=Gui.fluxcad_workspace;main.show()
+        opened.extend(App.listDocuments())
+        import model,i18n,sketch_regions
+        assert i18n.language()==language
+        assert all(Path(module.__file__).resolve().parent==root for module in (model,i18n,sys.modules['fluxcad'],sys.modules['sketch_regions'],sys.modules['grid_input']))
+        checks.append('entry macro starts this package in '+language+' without development-directory imports')
+        doc=App.ActiveDocument
+        with model.transaction(doc,'Smoke box and hole'):
+            b=model.box(doc,60,40,12);h=model.hole(doc,b,30,20,8)
+        assert abs(h.Shape.Volume-(28800-math.pi*16*12))<0.001
+        with model.transaction(doc,'Smoke sketch extrusion'):
+            s=model.rectangle(doc,20,10);e=model.extrude(doc,s,5)
+        assert abs(e.Shape.Volume-1000)<0.001
+        s.setDatum('Width',App.Units.Quantity('30 mm'));doc.recompute()
+        assert abs(e.Shape.Volume-1500)<0.001
+        checks.append('solid volume, hole, constrained sketch extrusion and parametric update')
+        with model.transaction(doc,'Smoke undo'):
+            undo=model.box(doc,2,2,2);name=undo.Name
+        doc.undo();assert doc.getObject(name) is None
+        doc.redo();assert doc.getObject(name) is not None
+        checks.append('Undo and Redo')
+        doc.saveAs(str(output/'roundtrip.FCStd'));saved_name=doc.Name;App.closeDocument(saved_name)
+        doc=App.openDocument(str(output/'roundtrip.FCStd'));opened.append(doc.Name)
+        for obj in doc.Objects:obj.touch()
+        doc.recompute()
+        assert doc.getObject('Hole').Shape.isValid()
+        checks.append('FCStd save, reopen and recompute')
+        for sample in sorted((root/'samples').glob('*.FCStd')):
+            example=App.openDocument(str(sample));opened.append(example.Name)
+            for obj in example.Objects:obj.touch()
+            example.recompute()
+            invalid=[o.Name for o in example.Objects if 'Invalid' in o.State]
+            assert not invalid,(sample.name,invalid)
+            shapes=[o.Shape for o in example.Objects if hasattr(o,'Shape') and not o.Shape.isNull()]
+            assert shapes and all(shape.isValid() for shape in shapes),sample.name
+            assert example.License=='MIT',sample.name
+            checks.append('sample reopen/recompute: '+sample.name)
+            App.closeDocument(example.Name)
+        App.setActiveDocument(doc.Name)
+        s=doc.getObject('Rectangle')
+        Gui.Selection.clearSelection();Gui.Selection.addSelection(s);ws.edit_sketch()
+        QtCore.QTimer.singleShot(900,grid_check)
+    except Exception:finish(traceback.format_exc())
+
+def grid_check():
+    try:
+        ws.grid.set_density(80)
+        view=Gui.activeDocument().activeView();view.setAnimationEnabled(False);view.viewTop()
+        view.getCameraNode().height=300;ws.grid.set_auto(True);ws.refresh()
+        assert ws.grid.spacing==5
+        box=ws.sketch_panel.spacing;assert box.isEnabled()
+        box.lineEdit().selectAll()
+        for char in '0.5':
+            for event in (QtCore.QEvent.KeyPress,QtCore.QEvent.KeyRelease):
+                W.QApplication.sendEvent(box,QtGui.QKeyEvent(event,ord(char),QtCore.Qt.NoModifier,char))
+            ws.refresh()
+        for event in (QtCore.QEvent.KeyPress,QtCore.QEvent.KeyRelease):
+            W.QApplication.sendEvent(box,QtGui.QKeyEvent(event,QtCore.Qt.Key_Return,QtCore.Qt.NoModifier))
+        assert not ws.grid.auto and ws.grid.spacing==0.5 and abs(s.ViewObject.GridSize.Value-0.5)<1e-8
+        assert ws.sketch_panel.strong_snap.text()==('Stronger grid snapping' if language=='en' else 'スナップを強める')
+        checks.append('localized grid palette accepts 0.5 mm from automatic 5 mm and updates native snapping')
+        ws.finish_sketch()
+        QtCore.QTimer.singleShot(1200,prepare_render)
+    except Exception:finish(traceback.format_exc())
+
+def prepare_render():
+    try:
+        for name in list(App.listDocuments()):
+            if name in opened:App.closeDocument(name)
+        screenshot=App.openDocument(str(root/'samples/Sample.FCStd'));opened.append(screenshot.Name)
+        App.setActiveDocument(screenshot.Name)
+        import drawing
+        drawing.switch(ws,False)
+        ws.grid.set_auto(True)
+        view=Gui.activeDocument().activeView()
+        view.setAnimationEnabled(False);view.viewAxonometric()
+        ws.refresh();ws.fit()
+        QtCore.QTimer.singleShot(1200,capture)
+    except Exception:finish(traceback.format_exc())
+
+def capture():
+    try:
+        assert Path(App.ActiveDocument.FileName)==root/'samples/Sample.FCStd',App.ActiveDocument.FileName
+        view=Gui.activeDocument().activeView()
+        ws.grid.hide();view.fitAll()
+        view.saveImage(str(output/('sample-'+language+'.png')),1200,800,'White')
+        assert (output/('sample-'+language+'.png')).stat().st_size>1000
+        checks.append('active sample model renders to PNG using FreeCAD offscreen renderer')
+        finish()
+    except Exception:finish(traceback.format_exc())
+
+QtCore.QTimer.singleShot(1500,run)
