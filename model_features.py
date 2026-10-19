@@ -116,10 +116,7 @@ def create_revolution(doc, sketch, index=0, axis='Y', center=(0,0,0), angle=360,
         if existing:
             obj = existing
         else:
-            if 'inputs' in region:
-                source = model._split_profile_source(doc,sketch,region)
-            else:
-                source = model._internal(model._profile_binder(doc,sketch,region['edges'],tr('回転プロファイル')))
+            source = model._split_profile_source(doc,sketch,region)
             doc.recompute()
             obj = doc.addObject('Part::Revolution','Revolution')
             obj.Label = tr('回転')

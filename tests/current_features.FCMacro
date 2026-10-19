@@ -1,0 +1,74 @@
+"""Package integration checks, not physical UI or SolidWorks conformance certification."""
+import os,sys,json,traceback,hashlib
+from pathlib import Path
+root=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(root))
+import FreeCAD as App,FreeCADGui as Gui
+from PySide import QtCore,QtWidgets as W
+W.QApplication.instance().setQuitOnLastWindowClosed(False)
+output=Path(os.environ['FLUXCAD_TEST_OUTPUT']);output.mkdir(parents=True,exist_ok=True)
+language=os.environ.get('FLUXCAD_TEST_LANGUAGE','ja')
+App.ParamGet('User parameter:BaseApp/Preferences/FluxCAD').SetString('Language',language)
+checks=[]
+
+def run():
+    try:
+        macro=root/'FluxCAD.FCMacro'
+        exec(compile(macro.read_text(encoding='utf-8-sig'),str(macro),'exec'),{'__file__':str(macro),'__name__':'__main__'})
+        ws=Gui.fluxcad_workspace
+        import i18n,sheetmetal_bridge,model,example_tools
+        assert i18n.language()==language
+        inventory=json.loads((root/'docs/releases/accepted-runtime.json').read_text())
+        for name,digest in inventory['runtime_sha256'].items():
+            assert hashlib.sha256((root/name).read_bytes()).hexdigest()==digest,name
+        for name,module in list(sys.modules.items()):
+            if name+'.py' in inventory['runtime_sha256']:
+                assert Path(module.__file__).resolve()==root/(name+'.py'),name
+        checks.append('Accepted 99 runtime hashes and loaded module origins match this package')
+        assert all(key in ws.ribbon_actions for key in ('dome','ellipse_dimensions','solidworks_open','solidworks_brep_open','examples','save_as'))
+        commands=sheetmetal_bridge.load();assert all(c in Gui.listCommands() for c in commands.values())
+        checks.append('Current ribbon actions and bundled SheetMetal base/flange/unfold commands registered')
+        import networkx
+        assert Path(networkx.__file__).resolve().is_relative_to(root/'addons/python-deps')
+        for path in sorted((root/'examples').rglob('*.FCStd')):
+            doc=App.openDocument(str(path));doc.recompute(None,True,True)
+            invalid=[o.Name for o in doc.Objects if 'Invalid' in o.State]
+            assert not invalid,(path.name,invalid)
+            shapes=[o.Shape for o in doc.Objects if hasattr(o,'Shape') and not o.Shape.isNull()]
+            assert shapes and all(s.isValid() for s in shapes),path.name
+            assert doc.License=='MIT'
+            checks.append('Example full recompute: '+path.relative_to(root).as_posix())
+            App.closeDocument(doc.Name)
+        assert all(example_tools.source_path(item[0]).is_file() for item in example_tools.CATALOG)
+        checks.append('All eight example working-copy catalog targets exist')
+        # Saved sketches are fixtures; this geometry check does not select via the UI.
+        fixture=root/'samples/region-selection/Nested-Crossing-UI-Repro.FCStd'
+        doc=App.openDocument(str(fixture));sketch=doc.getObject('Sketch')
+        regions=model.profiles(sketch);assert len(regions)==6
+        assert len(set(model.profile_key(c) for c in regions))==6
+        bodies=[model.create_extrusion(doc,sketch,i,12) for i in range(6)]
+        expected={b.Name:b.Shape.Volume for b in bodies}
+        saved=output/'six-cells.FCStd';doc.saveAs(str(saved));App.closeDocument(doc.Name)
+        doc=App.openDocument(str(saved));doc.recompute(None,True,True)
+        for name,volume in expected.items():
+            s=doc.getObject(name).Shape
+            assert s.isValid() and len(s.Solids)==1 and abs(s.Volume-volume)<1e-7
+        checks.append('Six nested/crossing cell extrusions survive save/reopen/full recompute')
+        App.closeDocument(doc.Name)
+        doc=App.openDocument(str(root/'samples/region-selection/Release-Selection-UI.FCStd'))
+        doc.recompute(None,True,True)
+        body=doc.getObject('Extrude')
+        assert body.Shape.isValid() and len(body.Shape.Solids)==1 and abs(body.Shape.Volume-1.44)<1e-7
+        checks.append('Physically created release extrusion reopens as a valid 1.44 mm3 solid')
+        App.closeDocument(doc.Name)
+        import region_picker
+        assert region_picker.format_region_area(.001464321575)=='0.00146432'
+        checks.append('Positive tiny area formatting remains nonzero')
+        report=dict(status='PASS',language=language,checks=checks,limits='Native integration checks only. No all-feature/all-file certification; SolidWorks experimental and not certified by this test.')
+    except Exception:
+        report=dict(status='FAIL',language=language,checks=checks,error=traceback.format_exc())
+    (output/'report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
+    for name in list(App.listDocuments()):App.closeDocument(name)
+    W.QApplication.instance().quit()
+
+QtCore.QTimer.singleShot(1000,run)

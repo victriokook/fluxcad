@@ -241,8 +241,7 @@ def create(doc, sketch, indices=None, existing=None, operation='new', **values):
                     sources=[]
                     for i in group:
                         region=regions[i]
-                        source=(model._split_profile_source(doc,sketch,region) if 'inputs' in region else
-                                model._internal(model._profile_binder(doc,sketch,region['edges'],tr('押し出し領域 (%s)')%sketch.Label)))
+                        source=model._split_profile_source(doc,sketch,region)
                         sources.append(source)
                     base=model._world_source(doc,values['target']) if operation!='new' else None
                     doc.recompute()

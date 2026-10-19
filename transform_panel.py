@@ -9,6 +9,14 @@ from extrude_panel import ExtrudePanel
 import model_transform as transforms
 
 
+def focus_active_view():
+    document = Gui.activeDocument()
+    if document:
+        view = document.activeView()
+        if hasattr(view, 'graphicsView'):
+            view.graphicsView().viewport().setFocus(QtCore.Qt.OtherFocusReason)
+
+
 class TransformPanel(ExtrudePanel):
     preferred_height = 570
 
@@ -40,12 +48,40 @@ class TransformPanel(ExtrudePanel):
             self.pivot.addItem(title,key)
         self.center = [row('center'+a,tr('中心 ')+a,self.number()) for a in 'XYZ']
         self.delta = [row('delta'+a,a+tr('方向の移動量'),self.number()) for a in 'XYZ']
+        self.center_xy_button = W.QPushButton(tr('XY中心を原点へ', 'Center XY at Origin'))
+        self.center_xy_button.setObjectName('FluxCenterXYOrigin')
+        self.center_xy_button.setToolTip(tr('選択全体のXY中心を原点へ合わせます。Z移動量は保持します。', 'Align the selection XY center to the origin. Keep the current Z translation.'))
+        self.center_xy_button.clicked.connect(self.center_xy)
+        form.addRow(self.center_xy_button)
+        self.ground_z_button = W.QPushButton(tr('最下点をZ=0へ', 'Place Lowest Point at Z=0'))
+        self.ground_z_button.setObjectName('FluxGroundZOrigin')
+        self.ground_z_button.setToolTip(tr('選択全体の最小Zを0へ合わせます。X・Y移動量は保持します。', 'Set the selection minimum Z to zero. Keep the current X/Y translations.'))
+        self.ground_z_button.clicked.connect(self.ground_z)
+        form.addRow(self.ground_z_button)
         self.copy = W.QCheckBox(tr('コピーを作成'))
         self.copy.toggled.connect(self.schedule);form.addRow(self.copy)
         self.note = W.QLabel(tr('複数ボディは同じ中心・軸で回転します。\nコピーは独立した形状になり、元の寸法変更には追従しません。'))
         self.note.setWordWrap(True);form.addRow(self.note)
         self.combos = (self.mode,self.axis,self.pivot)
         self.spins = (self.angle,*self.center,*self.delta)
+
+    def center_xy(self):
+        if not self.active:
+            return
+        self.mode.setCurrentIndex(self.mode.findData('translate'))
+        self.delta[2].interpretText()
+        self.delta[0].setValue(-self.group_center[0])
+        self.delta[1].setValue(-self.group_center[1])
+        self.update_preview()
+
+    def ground_z(self):
+        if not self.active:
+            return
+        self.mode.setCurrentIndex(self.mode.findData('translate'))
+        self.delta[0].interpretText()
+        self.delta[1].interpretText()
+        self.delta[2].setValue(-self.group_bottom)
+        self.update_preview()
 
     @staticmethod
     def number(suffix=' mm',minimum=-1e9,maximum=1e9):
@@ -57,21 +93,30 @@ class TransformPanel(ExtrudePanel):
     def source_signature(self):
         return [(obj.Name,obj.Shape.hashCode(),str(obj.getGlobalPlacement()),str(obj.ExpressionEngine)) for obj in self.targets]
 
-    def start(self,objects):
+    def start(self, objects):
         self.cancel()
-        self.doc=App.ActiveDocument
-        self.targets=transforms.targets(self.doc,objects)
-        self.signature=self.source_signature()
-        self.selection=[(sel.ObjectName,tuple(sel.SubElementNames)) for sel in Gui.Selection.getSelectionEx()]
-        self.ws.region_picker.ticket+=1;self.ws.region_picker.clear()
+        self.doc = App.ActiveDocument
+        self.targets = transforms.targets(self.doc, objects)
+        self.signature = self.source_signature()
+        self.selection = [(sel.ObjectName, tuple(sel.SubElementNames)) for sel in Gui.Selection.getSelectionEx()]
+        self.ws.region_picker.ticket += 1
+        self.ws.region_picker.clear()
         self.heading.setText(tr('移動 / コピー'))
-        self.summary.setText(tr('対象：%d ボディ\n%s')%(len(self.targets),'、'.join(obj.Label for obj in self.targets)))
-        self.group_center=transforms.selection_center(self.targets)
-        self.angle.setValue(0);self.copy.setChecked(False)
-        self.mode.setCurrentIndex(0);self.pivot.setCurrentIndex(0)
-        for field,value in zip(self.center,self.group_center):field.setValue(value)
-        for field in self.delta:field.setValue(0)
-        self.active=True;self.panel.show();self.update_preview();self.position()
+        self.summary.setText(tr('対象：%d ボディ\n%s') % (len(self.targets), '、'.join((obj.Label for obj in self.targets))))
+        self.group_center = transforms.selection_center(self.targets)
+        self.group_bottom = min(shape.BoundBox.ZMin for shape in transforms.shapes(self.targets, App.Placement()))
+        self.angle.setValue(0)
+        self.copy.setChecked(False)
+        self.mode.setCurrentIndex(0)
+        self.pivot.setCurrentIndex(0)
+        for field, value in zip(self.center, self.group_center):
+            field.setValue(value)
+        for field in self.delta:
+            field.setValue(0)
+        self.active = True
+        self.panel.show()
+        self.update_preview()
+        self.position()
 
     def parameters(self):
         pivot=self.pivot.currentData()
@@ -137,6 +182,7 @@ class TransformPanel(ExtrudePanel):
             results=transforms.apply(self.doc,self.targets,copy=self.copy.isChecked(),**self.parameters())
         except Exception as error:
             self.status.setStyleSheet('color:#ac3830;');self.status.setText(str(error));self.valid=False;self.accept_button.setEnabled(False);return
+        focus_active_view()
         self.active=False;self.panel.hide();Gui.Selection.clearSelection()
         for obj in results:Gui.Selection.addSelection(obj)
         self.ws.refresh()

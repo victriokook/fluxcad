@@ -1,4 +1,4 @@
-"""Planar and cylindrical face alignment in world space."""
+"""Planar/coaxial face alignment and vertex-to-vertex translation in world space."""
 from i18n import tr
 import math
 import re
@@ -11,15 +11,25 @@ from browser import body_owner
 
 def reference(doc, name, subname):
     obj=doc.getObject(name) if doc else None
-    if not obj or not re.search(r'(^|\.)Face[1-9][0-9]*$',subname):
-        raise ValueError(tr('平面または円筒の側面をクリックしてください。辺や頂点は選択できません。',
-                            'Click a planar face or cylindrical side face. Edges and vertices are not supported.'))
+    if not obj or not re.search(r'(^|\.)(Face|Vertex)[1-9][0-9]*$',subname):
+        raise ValueError(tr('頂点、平面、または円筒の側面をクリックしてください。辺は選択できません。',
+                            'Click a vertex, planar face or cylindrical side face. Edges are not supported.'))
     # Native selection can address a feature through its App::Part/Body path.
     resolved=obj.getSubObject(subname,1)
     obj=resolved or obj
-    face_name=subname.rsplit('.',1)[-1]
-    face(obj,face_name)
-    return obj,face_name
+    element_name=subname.rsplit('.',1)[-1]
+    element(obj,element_name)
+    return obj,element_name
+
+
+def element(obj, name):
+    if re.fullmatch(r'Vertex[1-9][0-9]*',name) and hasattr(obj,'Shape'):
+        try:
+            return model.world_shape(obj).getElement(name)
+        except Exception:
+            raise ValueError(tr('選択した頂点がありません。頂点を選び直してください。',
+                                'The selected vertex no longer exists. Select it again.'))
+    return face(obj,name)
 
 
 def face(obj, name):
@@ -36,6 +46,7 @@ def face(obj, name):
 
 
 def kind(selected_face):
+    if selected_face.ShapeType=='Vertex':return 'vertex'
     if isinstance(selected_face.Surface,Part.Plane):return 'plane'
     if isinstance(selected_face.Surface,Part.Cylinder):return 'cylinder'
     raise ValueError(tr('平面または円筒面を選択してください。','Select a planar or cylindrical face.'))
@@ -84,7 +95,12 @@ def placement(source_face, target_face, gap=0, angle=0, opposed=True, center=Tru
         raise ValueError(tr('距離と角度には有限の数値を指定してください。','Distance and angle must be finite numbers.'))
     shape_kind=kind(source_face)
     if kind(target_face)!=shape_kind:
-        raise ValueError(tr('平面どうし、または円筒面どうしを選択してください。','Select two planar faces or two cylindrical faces.'))
+        raise ValueError(tr('頂点どうし、平面どうし、または円筒面どうしを選択してください。',
+                            'Select two vertices, two planar faces or two cylindrical faces.'))
+    if shape_kind=='vertex':
+        # Point alignment preserves orientation. Face-only options must never
+        # rotate or offset a point pair, including stale UI values.
+        return App.Placement(target_face.Point-source_face.Point,App.Rotation())
     if shape_kind=='cylinder':
         origin,source_axis=cylinder_axis(source_face);destination,target_axis=cylinder_axis(target_face)
         turn=rotation_between(source_axis,-target_axis if opposed else target_axis)
@@ -109,14 +125,16 @@ def placement(source_face, target_face, gap=0, angle=0, opposed=True, center=Tru
 def prepare(doc, source, target, copy=False, **values):
     source_obj,source_name=source;target_obj,target_name=target
     if not doc or source_obj.Document!=doc or target_obj.Document!=doc:
-        raise ValueError(tr('同じ文書内の面を選択してください。'))
+        raise ValueError(tr('同じ文書内の面または頂点を選択してください。',
+                            'Select faces or vertices in the same document.'))
     moving=transforms.targets(doc,[source_obj],copy)[0]
     fixed=body_owner(target_obj)
     if moving==fixed:
-        raise ValueError(tr('移動するボディとは別のボディ、または構築平面を合わせ先に選択してください。'))
+        raise ValueError(tr('移動するボディとは別の形状を合わせ先に選択してください。',
+                            'Choose a target outside the body being moved.'))
     if not copy and (target_obj in moving.InListRecursive or fixed in moving.InListRecursive):
         raise ValueError(tr('合わせ先が移動するボディに依存しています。「コピーを作成」を選ぶか、別の合わせ先を選択してください。'))
-    pose=placement(face(source_obj,source_name),face(target_obj,target_name),**values)
+    pose=placement(element(source_obj,source_name),element(target_obj,target_name),**values)
     return moving,pose
 
 

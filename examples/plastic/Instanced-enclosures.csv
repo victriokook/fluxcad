@@ -1,0 +1,8 @@
+﻿name,kind,formula
+BossDiameter,length,12 mm
+BossDraft,angle,2.5 deg
+BossHeight,length,18 mm
+GussetHeight,length,10 mm
+HoleDiameter,length,4 mm
+SnapAngle,angle,180 deg
+SnapHeight,length,BossHeight + 2 mm

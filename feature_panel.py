@@ -287,6 +287,7 @@ class FeaturePanel(FloatingPanel):
         self.rows['axis'][0].setText(tr('方向1の軸','Axis 1') if kind=='linear' else tr('軸（全体座標）'))
         self.rows['count'][0].setText(tr('方向1の個数','Quantity 1') if kind=='linear' else tr('個数（元を含む）'))
         self.angle.setValue(values.get('angle',360))
+        self.initial_angle=(values.get('angle',360),self.angle.value()) if existing else None
         self.reverse.setCurrentIndex(int(values.get('reverse',False)))
         self.initial_center=values.get('center',(0,0,0))
         for field,value in zip(self.center,self.initial_center):field.setValue(value)
@@ -423,6 +424,15 @@ class FeaturePanel(FloatingPanel):
             raise ValueError(tr('スケッチが変更されました。キャンセルして選び直してください。'))
         return obj
 
+    def center_values(self):
+        return tuple(original if field.value()==shown else field.value()
+                     for field,original,shown in zip(self.center,self.initial_center,self.displayed_center))
+
+    def angle_value(self):
+        value=self.angle.value()
+        initial=getattr(self,'initial_angle',None)
+        return initial[0] if initial is not None and value==initial[1] else value
+
     def parameters(self):
         if self.kind=='plane':return {'base':self.plane.currentText(),'offset':self.plane_offset.value()}
         if self.kind=='loft':
@@ -449,10 +459,10 @@ class FeaturePanel(FloatingPanel):
                      if self.faces.item(i).checkState()==QtCore.Qt.Checked]
             return {'faces':faces,'thickness':self.thickness.value(),'inward':self.side.currentIndex()==0}
         common = {'axis':self.axis.currentText(),'center':tuple(field.value() for field in self.center),
-                  'angle':self.angle.value(),'reverse':bool(self.reverse.currentIndex())}
+                  'angle':self.angle_value(),'reverse':bool(self.reverse.currentIndex())}
         if self.kind in ('revolve','circular'):
             # Display rounding must not move an existing axis on an angle-only edit.
-            if common['center']==self.displayed_center:common['center']=self.initial_center
+            common['center']=self.center_values()
             mode=self.axis_mode.currentData()
             if mode=='reference':
                 if not self.axis_ref:raise ValueError(tr('軸となる辺・円筒面を選択してください。','Select an edge or cylinder to define the axis.'))
@@ -594,6 +604,7 @@ class FeaturePanel(FloatingPanel):
         except Exception as error:
             self.status.setStyleSheet('color:#ac3830;');self.status.setText(str(error))
             self.valid=False;self.accept_button.setEnabled(False);return
+        focus_feature_view()
         self.detach_axis();self.active=False;self.panel.hide();self.ws.region_picker.clear()
         Gui.Selection.clearSelection();Gui.Selection.addSelection(result);self.ws.refresh()
         self.ws.main.statusBar().showMessage(tr('確定しました。履歴のダブルクリックで編集、Ctrl＋Zで元に戻せます。'),8000)
@@ -615,3 +626,11 @@ class FeaturePanel(FloatingPanel):
             except (RuntimeError,ReferenceError):changed=True
             if changed and self.valid:self.update_preview()
         self.position()
+
+
+def focus_feature_view():
+    document = Gui.activeDocument()
+    if document:
+        view = document.activeView()
+        if hasattr(view, 'graphicsView'):
+            view.graphicsView().viewport().setFocus(QtCore.Qt.OtherFocusReason)

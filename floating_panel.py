@@ -46,12 +46,17 @@ class FloatingPanel(ExtrudePanel):
         self.panel.installEventFilter(self)
 
     def viewport_rect(self):
-        gd = Gui.activeDocument()
-        if not gd:return None
-        view = gd.activeView()
-        if not hasattr(view,'graphicsView'):return None
-        viewport = view.graphicsView().viewport()
-        return QtCore.QRect(viewport.mapTo(self.ws.main,QtCore.QPoint()),viewport.size())
+        try:
+            gd = Gui.activeDocument()
+            if not gd:
+                return None
+            view = gd.activeView()
+            if not hasattr(view, 'graphicsView'):
+                return None
+            viewport = view.graphicsView().viewport()
+            return QtCore.QRect(viewport.mapTo(self.ws.main, QtCore.QPoint()), viewport.size())
+        except (RuntimeError, ReferenceError):
+            return None
 
     def movement_rect(self):
         viewport = self.viewport_rect()
@@ -72,7 +77,7 @@ class FloatingPanel(ExtrudePanel):
         layout = self.panel.layout()
         layout.setContentsMargins(QtCore.QMargins(6,2,6,2) if compact else self.expanded_margins)
         layout.setSpacing(0 if compact else self.expanded_spacing)
-        width = min(310,area.width())
+        width = min(getattr(self, 'preferred_width', 310),area.width())
         height = 32 if compact else min(self.preferred_height,area.height())
         if self.custom_position:
             preferred = area.topLeft()+self.offset

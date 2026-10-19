@@ -1,0 +1,23 @@
+{
+  "status": "PASS",
+  "language": "en",
+  "checks": [
+    "Accepted 99 runtime hashes and loaded module origins match this package",
+    "Current ribbon actions and bundled SheetMetal base/flange/unfold commands registered",
+    "Example full recompute: examples/dome/Hollow-dome-demo.FCStd",
+    "Example full recompute: examples/ellipse/Positioned-ellipses-demo.FCStd",
+    "Example full recompute: examples/plastic/Drafted-enclosure.FCStd",
+    "Example full recompute: examples/plastic/Gusset-enclosure.FCStd",
+    "Example full recompute: examples/plastic/Instanced-enclosures.FCStd",
+    "Example full recompute: examples/plastic/Parametric-enclosure.FCStd",
+    "Example full recompute: examples/plastic/Plastic-case.FCStd",
+    "Example full recompute: examples/plastic/Plastic-enclosure.FCStd",
+    "Example full recompute: examples/plastic/Snap-hook.FCStd",
+    "Example full recompute: examples/plastic/Tapered-rib-demo.FCStd",
+    "Example full recompute: examples/sheetmetal/Bracket.FCStd",
+    "All eight example working-copy catalog targets exist",
+    "Six nested/crossing cell extrusions survive save/reopen/full recompute",
+    "Positive tiny area formatting remains nonzero"
+  ],
+  "limits": "Native integration checks only. No all-feature/all-file certification; SolidWorks experimental and not certified by this test."
+}

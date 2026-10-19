@@ -282,6 +282,7 @@ class ConstructionPlane:
 
 def create(doc,kind,existing=None,**values):
     check_sources(doc,kind,existing,**values);expected=build(kind,**values)
+    if unchanged(existing,kind,**values):return existing
     solid_dependents={o.Name for o in existing.InListRecursive if hasattr(o,'Shape') and o.Shape.Solids} if existing else set()
     with model.transaction(doc,title(kind)):
         obj=existing
@@ -341,3 +342,24 @@ def create(doc,kind,existing=None,**values):
         if not existing:
             obj.ViewObject.ShapeColor=(.96,.68,.28);obj.ViewObject.LineColor=(.72,.44,.14);obj.ViewObject.Transparency=75
     return obj
+
+
+def unchanged(existing, kind, **values):
+    if existing is None or existing.FluxConstructionPlane != kind or existing.Error or existing.Shape.isNull() or not existing.Shape.isValid():
+        return False
+    data = dict(reference_a=None, reference_b=None, reference_c=None, base='XY', axis='X', axis_reference=None, angle=45, size=80, offset=10, reversed=False, path_mode='fraction', fraction=.5, path_distance=10, path_reverse=False)
+    data.update(values)
+    if kind in ('angle', 'offset'):
+        data['reference_b'] = None
+        if data['base'] != 'face':
+            data['reference_a'] = None
+        if kind == 'offset' or data['axis'] != 'edge':
+            data['axis_reference'] = None
+    else:
+        data['axis_reference'] = None
+    if kind == 'tangent':
+        data['reference_b'] = None
+        data['base'] = 'face'
+    if kind == 'along_path':
+        data['reference_b'] = None
+    return all(value == data[key] for key, value in settings(existing).items())

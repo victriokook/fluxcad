@@ -16,6 +16,20 @@ from grid import Grid
 
 ROOT = os.path.dirname(__file__)
 
+def widgets_of_class(parent, class_name):
+    try:
+        candidates = parent.findChildren(W.QWidget)
+    except (RuntimeError, ReferenceError):
+        return []
+    result = []
+    for widget in candidates:
+        try:
+            if widget.metaObject().className() == class_name:
+                result.append(widget)
+        except (RuntimeError, ReferenceError):
+            continue
+    return result
+
 
 from navigation import FusionMouse
 
@@ -61,6 +75,14 @@ class Workspace:
         self.transform = TransformPanel(self)
         from align_panel import AlignPanel
         self.alignment = AlignPanel(self)
+        from scale_dimensions_panel import ScaleDimensionsPanel
+        from face_offset_panel import FaceOffsetPanel
+        self.dimension_scale = ScaleDimensionsPanel(self)
+        self.face_offset = FaceOffsetPanel(self)
+        from interference_panel import InterferencePanel
+        self.interference = InterferencePanel(self)
+        from plastic_panel import PlasticPanel
+        self.plastic = PlasticPanel(self)
         from mesh_panel import MeshPanel
         self.mesh_edit = MeshPanel(self)
         from mesh_operations_panel import MeshOperationsPanel
@@ -132,6 +154,14 @@ QListWidget#FluxHistoryList::item:selected {background:#d1eee8;color:#12584d;bor
                 self.transform.cancel()
             if self.alignment.active:
                 self.alignment.cancel()
+            if self.face_offset.active:
+                self.face_offset.cancel()
+            if self.dimension_scale.active:
+                self.dimension_scale.cancel()
+            if self.interference.active:
+                self.interference.cancel()
+            if self.plastic.active:
+                self.plastic.cancel()
             if self.mesh_edit.active:
                 self.mesh_edit.cancel()
             if self.mesh_ops.active:
@@ -176,8 +206,10 @@ QListWidget#FluxHistoryList::item:selected {background:#d1eee8;color:#12584d;bor
         if getattr(self,'restored',False):
             return
         self.restored = True
+        prune_widget_refs(self)
         self.drawing_scene.close()
         if getattr(self,'search_dialog',None):self.search_dialog.close()
+        if getattr(self,'parameter_dialog',None):self.parameter_dialog.close()
         self.mouse.enabled = False
         self.mouse.cancel()
         self.cube.close()
@@ -185,6 +217,10 @@ QListWidget#FluxHistoryList::item:selected {background:#d1eee8;color:#12584d;bor
         self.features.close()
         self.transform.close()
         self.alignment.close()
+        self.dimension_scale.close()
+        self.interference.close()
+        self.plastic.close()
+        self.face_offset.close()
         self.mesh_edit.close()
         self.mesh_ops.close()
         self.hole_panel.close()
@@ -301,6 +337,14 @@ QListWidget#FluxHistoryList::item:selected {background:#d1eee8;color:#12584d;bor
             self.mesh_edit.cancel()
         if self.alignment.active:
             self.alignment.cancel()
+        if self.face_offset.active:
+            self.face_offset.cancel()
+        if self.dimension_scale.active:
+            self.dimension_scale.cancel()
+        if self.interference.active:
+            self.interference.cancel()
+        if self.plastic.active:
+            self.plastic.cancel()
         if self.transform.active:
             self.transform.cancel()
         if self.features.active:
@@ -331,6 +375,20 @@ QListWidget#FluxHistoryList::item:selected {background:#d1eee8;color:#12584d;bor
             obj = doc.getObject(item.data(QtCore.Qt.UserRole)) if doc else None
             if not obj:
                 return
+            if getattr(obj,'FluxFaceOffset',False) and not self.current_sketch():
+                self.face_offset.start(existing=obj);return
+            if getattr(obj,'FluxPlastic','') and not self.current_sketch():
+                self.plastic.start(existing=obj);return
+            if type(getattr(obj,'Proxy',None)).__module__ in ('SheetMetalBaseCmd','SheetMetalCmd','SheetMetalUnfoldCmd') and not self.current_sketch():
+                if Gui.Control.activeDialog():
+                    raise ValueError(tr('先に開いている編集を終了してください。','Finish the current edit first.'))
+                if not Gui.activeDocument().setEdit(obj.Name):
+                    raise ValueError(tr('板金の編集を開始できません。','Cannot start sheet metal editing.'))
+                self.native_task_opened=True
+                self.ribbon_tabs.setCurrentIndex(self.tab_indices['sheet']);self.compact()
+                return
+            if getattr(obj,'FluxDimensionScale',False) and not self.current_sketch():
+                self.dimension_scale.start(existing=obj);return
             if obj.TypeId=='Part::Scale' and not self.current_sketch():
                 import native_tools
                 native_tools.edit_scale(self,obj);return
@@ -372,6 +430,11 @@ QListWidget#FluxHistoryList::item:selected {background:#d1eee8;color:#12584d;bor
                 extrusion = getattr(obj,'FluxExtrusion',None) or (obj if obj.TypeId=='Part::Extrusion' else None)
                 if not extrusion or self.current_sketch():
                     return
+                import parameters
+                if parameters.expression(extrusion,'LengthFwd') or parameters.expression(extrusion,'LengthRev'):
+                    import parameter_panel
+                    parameter_panel.show(self)
+                    return
                 fields = [(tr('全長') if extrusion.Symmetric else tr('距離'),extrusion.LengthFwd.Value,0.001)]
                 if not extrusion.Symmetric and extrusion.LengthRev.Value>0:
                     fields.append((tr('反対側の距離'),extrusion.LengthRev.Value,0.001))
@@ -403,6 +466,10 @@ QListWidget#FluxHistoryList::item:selected {background:#d1eee8;color:#12584d;bor
         self.features.refresh()
         self.transform.refresh()
         self.alignment.refresh()
+        self.dimension_scale.refresh()
+        self.interference.refresh()
+        self.plastic.refresh()
+        self.face_offset.refresh()
         self.mesh_edit.refresh()
         self.mesh_ops.refresh()
         self.browser.refresh()
@@ -423,6 +490,11 @@ QListWidget#FluxHistoryList::item:selected {background:#d1eee8;color:#12584d;bor
         self.ribbon_actions['move_numeric'].setEnabled(sketch is None)
         for key in self.solid_action_keys:
             self.ribbon_actions[key].setEnabled(sketch is None)
+        selected = Gui.Selection.getSelection()
+        validatable = sketch is not None or (len(selected)==1 and selected[0].Document==doc
+                                             and selected[0].TypeId=='Sketcher::SketchObject')
+        self.ribbon_actions['validate_sketch'].setEnabled(bool(validatable) and
+                                                         (sketch is not None or not Gui.Control.activeDialog()))
         self.ribbon_actions['grid'].setChecked(self.grid.enabled)
         for shortcut in getattr(self,'shortcuts',[]):
             try:
@@ -472,17 +544,16 @@ QListWidget#FluxHistoryList::item:selected {background:#d1eee8;color:#12584d;bor
         # Bind shortcuts to 3D widgets only, never globally to text fields.
         if not hasattr(self, 'bound_views'):
             self.bound_views, self.shortcuts = set(), []
-        for widget in self.main.findChildren(W.QWidget):
-            if widget.metaObject().className() == 'Gui::View3DInventorViewer' and widget not in self.bound_views:
+        for widget in widgets_of_class(self.main, 'Gui::View3DInventorViewer'):
+            if widget not in self.bound_views:
                 self.bound_views.add(widget)
                 widget.installEventFilter(self.mouse)
                 if hasattr(widget,'viewport'):
                     widget.viewport().installEventFilter(self.mouse)
                     widget.viewport().installEventFilter(self.region_picker)
                     self.sketch_snap.bind(widget.viewport())
-                for child in widget.findChildren(W.QWidget):
-                    if child.metaObject().className() == 'QOpenGLWidget':
-                        child.installEventFilter(self.mouse)
+                for child in widgets_of_class(widget, 'QOpenGLWidget'):
+                    child.installEventFilter(self.mouse)
                 self.drag_move.bind(widget)
                 if hasattr(widget,'viewport'):
                     self.drag_move.bind(widget.viewport())
@@ -490,6 +561,10 @@ QListWidget#FluxHistoryList::item:selected {background:#d1eee8;color:#12584d;bor
                 self.features.bind(widget)
                 self.transform.bind(widget)
                 self.alignment.bind(widget)
+                self.dimension_scale.bind(widget)
+                self.interference.bind(widget)
+                self.plastic.bind(widget)
+                self.face_offset.bind(widget)
                 self.mesh_edit.bind(widget)
                 self.mesh_ops.bind(widget)
                 self.hole_panel.bind(widget)
@@ -507,6 +582,10 @@ QListWidget#FluxHistoryList::item:selected {background:#d1eee8;color:#12584d;bor
                     self.features.bind(widget.viewport())
                     self.transform.bind(widget.viewport())
                     self.alignment.bind(widget.viewport())
+                    self.dimension_scale.bind(widget.viewport())
+                    self.interference.bind(widget.viewport())
+                    self.plastic.bind(widget.viewport())
+                    self.face_offset.bind(widget.viewport())
                     self.mesh_edit.bind(widget.viewport())
                     self.mesh_ops.bind(widget.viewport())
                     self.hole_panel.bind(widget.viewport())
@@ -603,8 +682,8 @@ QListWidget#FluxHistoryList::item:selected {background:#d1eee8;color:#12584d;bor
             return
         camera = view.getCamera()
         animation = view.isAnimationEnabled()
-        viewers = [(widget,widget.updatesEnabled()) for widget in self.main.findChildren(W.QWidget)
-                   if widget.metaObject().className()=='Gui::View3DInventorViewer' and widget.isVisible()]
+        viewers = [(widget,widget.updatesEnabled()) for widget in widgets_of_class(self.main,'Gui::View3DInventorViewer')
+                   if widget.isVisible()]
         # Native Sketcher starts an asynchronous rotate animation. Stop it before
         # switching, otherwise it can overwrite a restored camera on a later frame.
         view.setAnimationEnabled(False)
@@ -625,18 +704,27 @@ QListWidget#FluxHistoryList::item:selected {background:#d1eee8;color:#12584d;bor
                 for widget,updates in viewers:
                     widget.setUpdatesEnabled(updates)
 
-    def sketch(self):
+    def sketch(self,choose_plane=False):
+        if self.current_sketch():
+            raise ValueError(tr('先にスケッチ編集を終了してください。'))
         doc=self.doc()
         selected=Gui.Selection.getSelection()
         plane=selected[0] if len(selected)==1 and getattr(selected[0],'FluxPlane',False) else None
+        subelements=any(s.SubElementNames for s in Gui.Selection.getSelectionEx())
+        self.grid.update()
+        placement=App.Placement(self.grid.plane)
         with self.preserve_view():
             Gui.activateWorkbench('SketcherWorkbench')
             if plane:
                 import model_planes
                 sketch=model_planes.sketch_on_plane(doc,plane)
                 Gui.Selection.clearSelection();Gui.activeDocument().setEdit(sketch.Name)
-            else:
+            elif subelements or choose_plane:
                 Gui.runCommand('Sketcher_NewSketch')
+            else:
+                import model_planes
+                sketch=model_planes.sketch_on_grid(doc,placement)
+                Gui.Selection.clearSelection();Gui.activeDocument().setEdit(sketch.Name)
             self.compact()
         self.refresh()
 
@@ -666,6 +754,10 @@ QListWidget#FluxHistoryList::item:selected {background:#d1eee8;color:#12584d;bor
         selected = self.selection()[0]
         if selected.TypeId != 'Sketcher::SketchObject':
             raise ValueError(tr('編集するスケッチを選択してください。'))
+        # Convert intact old profile links before a native edit can reorder
+        # Shape edges/faces. The migration verifies unchanged dependent solids.
+        import sketch_regions
+        sketch_regions.upgrade_profiles(selected)
         self.region_picker.clear()
         Gui.Selection.clearSelection()
         with self.preserve_view():
@@ -692,14 +784,40 @@ QListWidget#FluxHistoryList::item:selected {background:#d1eee8;color:#12584d;bor
     def sketch_command(self, command):
         if not self.current_sketch():
             raise ValueError(tr('先にスケッチを作成するか、選択して編集を開始してください。'))
+        if command=='Sketcher_ViewSketch':
+            self.sketch_front()
+            return
         if command not in Gui.listCommands():
             raise ValueError(tr('このFreeCADではこのコマンドを使用できません。'))
         self.grid.update()
         Gui.runCommand(command)
         self.sketch_snap.started(command)
 
+    def sketch_front(self):
+        """Look along the sketch normal without fitting or changing grid scale."""
+        sketch=self.current_sketch()
+        if not sketch:raise ValueError(tr('先にスケッチの編集を開始してください。'))
+        view=Gui.activeDocument().activeView();camera=view.getCameraNode()
+        distance=camera.focalDistance.getValue()
+        orientation=view.getCameraOrientation()
+        target=App.Vector(*camera.position.getValue().getValue())+orientation.multVec(App.Vector(0,0,-distance))
+        plane=sketch.getGlobalPlacement()
+        # Keep the current focal point's in-plane coordinates, including the
+        # parent's placement. Never fitAll: that changes zoom and auto spacing.
+        local=plane.inverse().multVec(target);local.z=0
+        target=plane.multVec(local)
+        animation=view.isAnimationEnabled();view.setAnimationEnabled(False)
+        try:
+            camera.orientation.setValue(*plane.Rotation.Q)
+            camera.position.setValue(*(target+plane.Rotation.multVec(App.Vector(0,0,distance))))
+            self.grid.update();self.sketch_panel.refresh();view.redraw()
+        finally:
+            view.setAnimationEnabled(animation)
+
     def finish_sketch(self):
         if self.current_sketch():
+            Gui.runCommand('Sketcher_StopOperation')
+            self.sketch_snap.started(None)
             with self.preserve_view():
                 Gui.activeDocument().resetEdit()
                 App.ActiveDocument.recompute()
@@ -708,9 +826,56 @@ QListWidget#FluxHistoryList::item:selected {background:#d1eee8;color:#12584d;bor
                 self.compact()
             self.refresh()
 
+    def validate_sketch(self,obj=None):
+        """Open FreeCAD's inspector without guessing or changing repair settings."""
+        editing = self.current_sketch()
+        if obj is None:
+            selected = Gui.Selection.getSelection()
+            obj = editing or (selected[0] if len(selected)==1 else None)
+        if not obj or obj.TypeId!='Sketcher::SketchObject' or obj.Document!=App.ActiveDocument:
+            raise ValueError(tr('検証するスケッチを1つ選択してください。',
+                                'Select one sketch in the active document to validate.'))
+        if editing and editing!=obj:
+            raise ValueError(tr('先に編集中のスケッチを終了してください。',
+                                'Finish the current sketch before validating a different sketch.'))
+        if Gui.Control.activeDialog() and not editing:
+            raise ValueError(tr('開いているタスクを確定または閉じてから実行してください。',
+                                'Finish or close the current task before starting another tool.'))
+        with self.preserve_view():
+            if editing:
+                self.select_sketch_geometry()
+                self.finish_sketch()
+            Gui.activateWorkbench('SketcherWorkbench')
+            Gui.Selection.clearSelection()
+            Gui.Selection.addSelection(obj)
+            command = 'Sketcher_ValidateSketch'
+            if command not in Gui.listCommands() or not Gui.Command.get(command).isActive():
+                raise ValueError(tr('このFreeCADではスケッチ検証を開始できません。',
+                                    'Sketch validation is unavailable in this FreeCAD session.'))
+            self.region_picker.ticket+=1
+            self.region_picker.clear()
+            self.region_picker.press=None
+            Gui.runCommand(command)
+            self.native_task_opened=bool(Gui.Control.activeDialog())
+            import sketch_validation
+            try:
+                sketch_validation.protect_coincidence_repair(self,obj)
+            except Exception:
+                if Gui.Control.activeDialog():Gui.Control.closeDialog()
+                self.native_task_opened=False
+                raise
+            self.compact()
+        self.refresh()
+
     def rectangle(self):
-        v = self.values(tr('長方形スケッチ'), [(tr('幅'),60,0.01),(tr('奥行'),40,0.01)], tr('XY平面に作成。Width / Height 拘束で寸法を編集できます。'))
-        if v: self.make(tr('長方形'),model.rectangle,*v)
+        self.grid.update();placement=App.Placement(self.grid.plane)
+        v = self.values(tr('長方形スケッチ'), [(tr('幅'),60,0.01),(tr('奥行'),40,0.01)],
+                        tr('表示グリッドの面に作成。Width / Height 拘束で寸法を編集できます。',
+                           'Create on the displayed grid plane. Edit dimensions with Width / Height constraints.'))
+        def create(doc,width,height):
+            sketch=model.rectangle(doc,width,height);sketch.Placement=placement
+            sketch.Label=tr('長方形スケッチ');doc.recompute();return sketch
+        if v:self.make(tr('長方形'),create,*v)
 
     def selected_profile(self,multiple=False):
         if self.current_sketch():
@@ -883,25 +1048,55 @@ QListWidget#FluxHistoryList::item:selected {background:#d1eee8;color:#12584d;bor
         self.refresh()
 
     def export(self):
-        import model_mesh
-        selected = Gui.Selection.getSelection()
-        if not selected or any(o.Document!=App.ActiveDocument or
-                               not (model_mesh.is_mesh(o) and o.Mesh.CountFacets or hasattr(o,'Shape') and not o.Shape.isNull()) for o in selected):
-            raise ValueError(tr('ソリッド・サーフェス・曲線またはメッシュを選択してください。','Select solids, surfaces, curves or meshes.'))
-        has_mesh=any(model_mesh.is_mesh(o) for o in selected)
-        path, kind = W.QFileDialog.getSaveFileName(self.main,tr('形状を書き出し'),'','STL (*.stl)' if has_mesh else 'STEP (*.step);;STL (*.stl)')
+        import model_mesh, export_tools
+        doc = App.ActiveDocument
+        if doc: doc.recompute()
+        objects = export_tools.visible_objects(doc)
+        if not objects:
+            raise ValueError(tr('書き出す形状が表示されていません。ブラウザーで表示をオンにしてください。',
+                                'No geometry is visible. Show the objects to export in the browser.'))
+        doc_name = doc.Name
+        context = export_tools.context(doc)
+        has_mesh=any(model_mesh.is_mesh(o) for o in objects)
+        path, kind = W.QFileDialog.getSaveFileName(self.main,
+            tr('表示中の形状をすべて書き出し','Export all visible geometry'),'','STL (*.stl)' if has_mesh else 'STEP (*.step);;STL (*.stl)')
         if not path: return
         ext = '.stl' if kind.startswith('STL') else '.step'
-        if not path.lower().endswith(ext): path += ext
+        completed_suffix = not path.lower().endswith(ext)
+        if completed_suffix:
+            path += ext
+        if completed_suffix and os.path.exists(path):
+            answer = W.QMessageBox.question(self.main,
+                tr('上書き確認', 'Confirm Overwrite'),
+                tr('既存のファイルを上書きしますか？', 'Overwrite the existing file?'),
+                W.QMessageBox.Yes | W.QMessageBox.No, W.QMessageBox.No)
+            if answer != W.QMessageBox.Yes:
+                return
+        try:
+            unchanged = App.ActiveDocument is doc and App.getDocument(doc_name) is doc
+            if unchanged:
+                doc.recompute()
+                unchanged = export_tools.context(doc) == context
+        except (RuntimeError, ReferenceError):
+            unchanged = False
+        if not unchanged:
+            raise ValueError(tr('文書または表示中の形状が変更されたため、出力を中止しました。再度エクスポートしてください。',
+                                'The document or visible geometry changed. Export was cancelled; start Export again.'))
+        skipped = 0
         if ext == '.stl':
-            if any(not model_mesh.is_mesh(o) and not o.Shape.Faces for o in selected):
-                raise ValueError(tr('曲線や点はSTLに含められません。STEPで別に書き出してください。',
-                                    'STL cannot contain curves or points. Export them separately as STEP.'))
-            model_mesh.export(selected,path)
+            targets = export_tools.stl_objects(objects)
+            if not targets:
+                raise ValueError(tr('表示中の形状は線・点だけのため、STLに出力できません。STEPを使用してください。',
+                                    'Visible geometry contains only curves or points. Use STEP instead of STL.'))
+            skipped = len(objects) - len(targets)
+            objects = targets
+            model_mesh.export(objects,path)
         else:
-            import Import
-            Import.export(selected,path)
-        self.main.statusBar().showMessage(tr('出力しました：')+path,8000)
+            export_tools.export_step(objects,path)
+        message = tr('表示中の%d個の形状を出力しました：','Exported %d visible objects: ') % len(objects) + path
+        if skipped:
+            message += tr('（線・点%d個はSTLの対象外）',' (%d curve/point objects omitted from STL)') % skipped
+        self.main.statusBar().showMessage(message,10000)
 
 
 def start():
@@ -911,3 +1106,10 @@ def start():
         old.toolbar.deleteLater()
         old.history.deleteLater()
     Gui.fluxcad_workspace = Workspace()
+
+def prune_widget_refs(ws):
+    live = {id(widget) for widget in W.QApplication.allWidgets()}
+    for controller in vars(ws).values():
+        widgets = getattr(controller, 'widgets', None)
+        if isinstance(widgets, list):
+            widgets[:] = [widget for widget in widgets if id(widget) in live]

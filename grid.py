@@ -40,6 +40,44 @@ class Grid:
         self.params.SetInt('Density',self.density)
         self.update()
 
+    @staticmethod
+    def for_view(view,current):
+        """Use an origin plane for principal views; retain the plane in orbit.
+
+        A parallel last sketch plane keeps its offset and local grid origin.
+        This method is deliberately never used to reorient an edited sketch.
+        """
+        direction=view.getCameraOrientation().multVec(App.Vector(0,0,1))
+        normal=current.Rotation.multVec(App.Vector(0,0,1))
+        if abs(normal.dot(direction))>0.9999:
+            return App.Placement(current)
+        components=tuple(direction);axis=max(range(3),key=lambda i:abs(components[i]))
+        if abs(components[axis])<0.9999:
+            return App.Placement(current)
+        sign=1 if components[axis]>0 else -1
+        if axis==0:
+            x=App.Vector(0,sign,0);y=App.Vector(0,0,1)
+        elif axis==1:
+            x=App.Vector(-sign,0,0);y=App.Vector(0,0,1)
+        else:
+            x=App.Vector(1,0,0);y=App.Vector(0,sign,0)
+        return App.Placement(App.Vector(),App.Rotation(x,y,x.cross(y),'ZXY'))
+
+    @staticmethod
+    def plane_name(plane):
+        normal=plane.Rotation.multVec(App.Vector(0,0,1))
+        if abs(normal.z)>0.9999:return tr('XY（上／下面）','XY (Top / Bottom)')
+        if abs(normal.y)>0.9999:return tr('XZ（前／後面）','XZ (Front / Rear)')
+        if abs(normal.x)>0.9999:return tr('YZ（右／左側面）','YZ (Right / Left)')
+        return tr('傾斜したスケッチ面','Inclined sketch plane')
+
+    @staticmethod
+    def is_edge_on(view,plane):
+        """A grid seen within about six degrees of its plane collapses to lines."""
+        normal=plane.Rotation.multVec(App.Vector(0,0,1))
+        direction=view.getCameraOrientation().multVec(App.Vector(0,0,1))
+        return abs(normal.dot(direction))<0.1
+
     def hide(self):
         for graph, switch, signature in self.scenes.values():
             switch.whichChild = coin.SO_SWITCH_NONE
@@ -108,6 +146,8 @@ class Grid:
         view = doc.activeView()
         if not hasattr(view,'getSceneGraph'):
             return
+        if sketch is None:
+            self.plane = self.for_view(view,self.plane)
         graph = view.getSceneGraph()
         key = int(graph.this)
         if key not in self.scenes:
@@ -128,7 +168,7 @@ class Grid:
         moving = self.move_step is not None and sketch is None
         if moving:
             step = self.move_step
-        plane = App.Placement() if moving else self.plane
+        plane = self.for_view(view,App.Placement()) if moving else self.plane
         self.spacing = step
         if sketch:
             native = sketch.ViewObject
@@ -160,7 +200,11 @@ class Grid:
         target = plane.inverse().multVec(target)
         cx,cy = round(target.x/step),round(target.y/step)
         extent = min(1000,max(40,math.ceil(abs(height)/step)*2))
-        signature = (step,cx,cy,extent,tuple(plane.Base),tuple(plane.Rotation.Q))
+        # An attached sketch needs a visible grid on the solid face itself.
+        # Offset toward the camera during edit; ordinary grids stay behind.
+        facing=plane.Rotation.multVec(App.Vector(0,0,1)).dot(view.getCameraOrientation().multVec(App.Vector(0,0,1)))
+        z=(0.002 if facing>=0 else -0.002) if sketch else -0.002
+        signature = (step,cx,cy,extent,tuple(plane.Base),tuple(plane.Rotation.Q),z)
         if signature != previous:
             group = coin.SoSeparator()
             pick = coin.SoPickStyle()
@@ -176,7 +220,6 @@ class Grid:
             minor,major = [],[]
             x0,x1 = (cx-extent)*step,(cx+extent)*step
             y0,y1 = (cy-extent)*step,(cy+extent)*step
-            z = -0.002  # Avoid fighting with faces on the sketch plane.
             for i in range(-extent,extent+1):
                 x,y = (cx+i)*step,(cy+i)*step
                 (major if (cx+i)%5 == 0 else minor).extend([(x,y0,z),(x,y1,z)])
@@ -228,6 +271,9 @@ def show_settings(ws):
     layout.addLayout(presets)
     hint = W.QLabel(tr('通常表示とスケッチ編集で共通です。\nスケッチのスナップも、この間隔に合わせます。'))
     layout.addWidget(hint)
+    planes = W.QLabel(tr('通常表示は上／下：XY、前／後：XZ、右／左：YZへ切り替わります。\nスケッチ編集中は、そのスケッチの面に固定します。',
+                        'Outside sketch edit: Top/Bottom uses XY, Front/Rear XZ, Right/Left YZ.\nWhile editing, the grid stays on that sketch plane.'))
+    planes.setWordWrap(True);layout.addWidget(planes)
     def update_enabled():
         density.setEnabled(auto.isChecked())
     auto.toggled.connect(update_enabled)

@@ -195,8 +195,8 @@ class RegionPicker(QtCore.QObject):
         graph=Gui.activeDocument().activeView().getSceneGraph()
         graph.addChild(node)
         self.overlay=(graph,node)
-        self.ws.main.statusBar().showMessage(tr('%d 領域を選択：合計 %.2f mm² — Ctrlで追加・解除 / 押し出し E') %
-                                           (len(entries),sum(e[4].Area for e in entries)),7000)
+        self.ws.main.statusBar().showMessage(tr('%d 領域を選択：合計 %s mm² — Ctrlで追加・解除 / 押し出し E', '%d regions selected: total %s mm² — Ctrl to add/remove / Extrude E') %
+                                           (len(entries),format_region_area(sum(e[4].Area for e in entries))),7000)
 
     def eventFilter(self,widget,event):
         if getattr(getattr(self.ws,'cube',None),'forwarding',False):
@@ -250,3 +250,12 @@ class RegionPicker(QtCore.QObject):
 
 # OCC errors inherit RuntimeError in supported FreeCAD builds.
 PartError = RuntimeError
+
+
+def format_region_area(area):
+    value = float(area)
+    if not math.isfinite(value) or value < 0:
+        raise ValueError('Invalid region area')
+    if 0 < value < 0.01:
+        return format(value, '.6g')
+    return format(value, '.2f')

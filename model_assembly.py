@@ -46,6 +46,12 @@ class Component:
     def loads(self,state):pass
 
 
+def copy_appearance(source,target):
+    for prop in ('ShapeColor','LineColor','PointColor','Transparency'):
+        setattr(target.ViewObject,prop,getattr(source.ViewObject,prop))
+    target.ViewObject.ShapeAppearance=source.ViewObject.ShapeAppearance
+
+
 def _component(doc,source,pose,label,grounded=False):
     obj=doc.addObject('Part::FeaturePython','Component');obj.Label=label
     for kind,name in [('App::PropertyBool','FluxComponent'),('App::PropertyLinkGlobal','Source'),
@@ -57,8 +63,7 @@ def _component(doc,source,pose,label,grounded=False):
     for name in ('Source','Grounded','AssemblyError'):obj.setEditorMode(name,1)
     obj.Placement=pose;obj.GroundPose=pose;obj.Grounded=grounded
     if grounded:obj.setExpression('Placement','GroundPose')
-    for prop in ('ShapeColor','LineColor','PointColor','Transparency'):
-        setattr(obj.ViewObject,prop,getattr(source.ViewObject,prop))
+    copy_appearance(source,obj)
     return obj
 
 
@@ -87,6 +92,7 @@ def create_components(doc,objects,name='',grounded=False,keep_sources=False,dupl
                 label=name.strip() or original.Label+(tr(' (複製)',' (Instance)') if duplicate else tr(' 部品',' Component'))
                 if name.strip() and len(objects)>1:label+=' %d'%(i+1)
                 obj=_component(doc,source,App.Placement(original.getGlobalPlacement()),label,grounded)
+                if duplicate:copy_appearance(original,obj)
                 result.append(obj)
                 if not keep_sources and not duplicate:original.Visibility=False
             doc.recompute()
@@ -251,6 +257,9 @@ def verify(poses):
 def create_joint(doc,follower,target,existing=None,**values):
     values=parameters(**values);expected=preview(doc,follower,target,existing,**values)
     relative=relative_pose(follower,target,existing)
+    if unchanged_joint(existing,follower,target,values):
+        verify(expected)
+        return existing
     with model.transaction(doc,tr('ジョイントを編集','Edit Joint') if existing else joint_label(values['kind'])):
         obj=existing
         if obj is None:
@@ -267,7 +276,7 @@ def create_joint(doc,follower,target,existing=None,**values):
             obj.setEditorMode('Target',1)
             obj.setEditorMode('AssemblyError',1)
         _slider_properties(obj)
-        obj.Label=joint_label(values['kind'])
+        obj.Label=edited_joint_label(existing,values['kind'])
         for key,prop in [('kind','Kind'),('origin','AxisOrigin'),('axis','AxisDirection'),('angle','Angle'),
                          ('limited','Limited'),('minimum','Minimum'),('maximum','Maximum'),('distance','Distance'),
                          ('distance_limited','DistanceLimited'),('distance_minimum','MinimumDistance'),('distance_maximum','MaximumDistance')]:
@@ -287,3 +296,23 @@ def release_joint(joint):
         obj.setExpression('Placement',None);obj.Driver=None;obj.Placement=pose
         joint.Document.removeObject(joint.Name);obj.Document.recompute();valid_component(obj)
     return obj
+
+
+def edited_joint_label(existing, kind):
+    if existing is not None and existing.Label != joint_label(str(existing.Kind)):
+        return existing.Label
+    return joint_label(kind)
+
+
+def unchanged_joint(existing, follower, target, values):
+    if existing is None or not existing.Valid or existing.AssemblyError or 'Invalid' in existing.State:
+        return False
+    if any(name not in existing.PropertiesList for name in ('Distance', 'DistanceLimited', 'MinimumDistance', 'MaximumDistance')):
+        return False
+    if 'slider' not in existing.getEnumerationsOfProperty('Kind'):
+        return False
+    if follower.Driver != existing or existing.Target != target:
+        return False
+    if dict(follower.ExpressionEngine).get('Placement') != existing.Name + '.OutputPose':
+        return False
+    return settings(existing) == values

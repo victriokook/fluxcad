@@ -1,0 +1,17 @@
+{
+  "format": "FluxCAD-animation",
+  "version": 1,
+  "mode": "part",
+  "axis": "Y",
+  "degrees": -123.4,
+  "frames": 7,
+  "fps": 12,
+  "width": 320,
+  "height": 240,
+  "background": "Transparent",
+  "translation": [
+    35.125,
+    -2.0,
+    4.5
+  ]
+}

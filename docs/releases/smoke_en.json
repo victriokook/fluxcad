@@ -1,0 +1,43 @@
+{
+  "status": "PASS",
+  "language": "en",
+  "version": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "checks": [
+    "entry macro starts this package in en without development-directory imports",
+    "solid volume, hole, constrained sketch extrusion and parametric update",
+    "Undo and Redo",
+    "FCStd save, reopen and recompute",
+    "sample reopen/recompute: Assembly-demo.FCStd",
+    "sample reopen/recompute: Chamfer-distances-demo.FCStd",
+    "sample reopen/recompute: Construction-axes-demo.FCStd",
+    "sample reopen/recompute: Construction-planes-demo.FCStd",
+    "sample reopen/recompute: Drawing-demo.FCStd",
+    "sample reopen/recompute: Face-offset-demo.FCStd",
+    "sample reopen/recompute: Mirror-plane-demo.FCStd",
+    "sample reopen/recompute: Path-pattern-demo.FCStd",
+    "sample reopen/recompute: Path-plane-demo.FCStd",
+    "sample reopen/recompute: Primitives-demo.FCStd",
+    "sample reopen/recompute: Sample.FCStd",
+    "sample reopen/recompute: Scale-inspection-demo.FCStd",
+    "sample reopen/recompute: Sketch-projection-demo.FCStd",
+    "sample reopen/recompute: Sketch-transforms-demo.FCStd",
+    "sample reopen/recompute: Slider-demo.FCStd",
+    "sample reopen/recompute: Surface-finishing-demo.FCStd",
+    "sample reopen/recompute: Surface-modeling-demo.FCStd",
+    "sample reopen/recompute: Surface-sections-demo.FCStd",
+    "sample reopen/recompute: Tangent-plane-demo.FCStd",
+    "sample reopen/recompute: Three-point-plane-demo.FCStd",
+    "localized grid palette accepts 0.5 mm from automatic 5 mm and updates native snapping",
+    "active sample model renders to PNG using FreeCAD offscreen renderer"
+  ],
+  "error": null
+}

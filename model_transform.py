@@ -74,6 +74,7 @@ def apply_placement(doc, objects, placement, copy=False, label=None, stationary=
                 result.Shape = shape
                 for prop in ('ShapeColor','LineColor','PointColor','Transparency','DisplayMode'):
                     setattr(result.ViewObject,prop,getattr(obj.ViewObject,prop))
+                copy_face_appearance(obj, result)
                 result.Visibility = True
             else:
                 local = App.Placement(obj.Placement)
@@ -95,3 +96,6 @@ def apply_placement(doc, objects, placement, copy=False, label=None, stationary=
                     abs(actual.common(shape).Volume-shape.Volume)>tolerance):
                 raise ValueError(tr('プレビューどおりに配置できないため、操作を取り消しました。'))
     return results
+
+def copy_face_appearance(source, target):
+    target.ViewObject.ShapeAppearance = source.ViewObject.ShapeAppearance

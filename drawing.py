@@ -143,6 +143,7 @@ def dialog(ws,title,name):
 
 def spin(form,name,label,value,minimum=-100000,maximum=100000,suffix=' mm'):
     w=W.QDoubleSpinBox();w.setObjectName(name);w.setRange(minimum,maximum);w.setDecimals(6);w.setSuffix(suffix);w.setValue(value)
+    w._flux_baseline=(w.value(),value)
     form.addRow(label,w);return w
 
 
@@ -167,7 +168,7 @@ def new_page(ws):
         p=doc.addObject(PAGE,'Drawing');p.Label=name.text().strip() or tr('図面','Drawing')
         t=doc.addObject('TechDraw::DrawSVGTemplate','DrawingTemplate')
         t.Template=str(Path(__file__).parent/'templates'/('FluxCAD-'+size.currentData()+'.svg'))
-        p.Template=t;p.Scale=scale.value();p.ProjectionType=projection.currentData()
+        p.Template=t;p.Scale=spin_value(scale);p.ProjectionType=projection.currentData()
         texts=dict(t.EditableTexts);texts.update(title=p.Label,scale='%g : 1'%p.Scale,projection=projection.currentText());t.EditableTexts=texts
     d.deleteLater();show(ws,p);return p
 
@@ -192,7 +193,7 @@ def sheet_settings(ws,page=None):
     buttons(f,d)
     if d.exec_():
         with model.transaction(p.Document,tr('用紙設定','Sheet Settings')):
-            p.Label=name.text().strip() or p.Label;p.Scale=scale.value();p.ProjectionType=projection.currentData()
+            p.Label=name.text().strip() or p.Label;p.Scale=spin_value(scale);p.ProjectionType=projection.currentData()
             for v in p.Views:
                 if v.TypeId==GROUP:
                     v.ProjectionType=p.ProjectionType
@@ -254,8 +255,8 @@ def insert_view(ws,group=False,existing=None):
             if group:target.RotationVector=App.Vector(*xdir)
             else:target.XDirection=App.Vector(*xdir)
         v.ScaleType='Page' if perpage.isChecked() else 'Custom'
-        if not perpage.isChecked():v.Scale=scale.value()
-        v.X=x.value();v.Y=y.value()
+        if not perpage.isChecked():v.Scale=spin_value(scale)
+        v.X=spin_value(x);v.Y=spin_value(y)
         for item in v.Views if group else [v]:item.HardHidden=hidden.isChecked()
         if group:
             for child in v.Views:
@@ -280,7 +281,7 @@ def annotation(ws,existing=None):
         with model.transaction(p.Document,tr('注記','Note')):
             note=existing or p.Document.addObject('TechDraw::DrawViewAnnotation','Note')
             if not existing:p.addView(note)
-            note.Text=text.toPlainText().splitlines();note.X=x.value();note.Y=y.value();note.TextSize=font.value()
+            note.Text=text.toPlainText().splitlines();note.X=spin_value(x);note.Y=spin_value(y);note.TextSize=spin_value(font)
         d.deleteLater();show(ws,p);return note
     d.deleteLater()
 
@@ -348,3 +349,9 @@ def export_page(ws,kind,path=None):
     if not path.exists() or not path.stat().st_size:raise RuntimeError(tr('図面を出力できませんでした。','Drawing export failed.'))
     ws.main.statusBar().showMessage(tr('図面を出力しました：','Drawing exported: ')+str(path),8000)
     return path
+
+
+def spin_value(field):
+    displayed, original = field._flux_baseline
+    value = field.value()
+    return original if value == displayed else value

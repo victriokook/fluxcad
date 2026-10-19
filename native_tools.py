@@ -19,8 +19,8 @@ SURFACE_TYPES=('Surface::Filling','Surface::GeomFillSurface','Surface::Sections'
 
 
 def can_edit_surface(obj):
-    import surface_ops, surface_finish
-    return obj.TypeId in SURFACE_TYPES or surface_ops.can_edit(obj) or surface_finish.can_edit(obj)
+    import surface_ops, surface_finish, curve_blend
+    return obj.TypeId in SURFACE_TYPES or surface_ops.can_edit(obj) or surface_finish.can_edit(obj) or curve_blend.can_edit(obj)
 
 
 def start(ws, key):
@@ -89,7 +89,8 @@ def start(ws, key):
 
 
 def edit_surface(ws, obj):
-    import surface_ops, surface_finish
+    import surface_ops, surface_finish, curve_blend
+    if curve_blend.can_edit(obj):return curve_blend.edit(ws,existing=obj)
     if surface_finish.can_edit(obj):
         return surface_finish.offset(ws,existing=obj)
     if surface_ops.can_edit(obj):

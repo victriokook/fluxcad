@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/cadmpeg/cadmpeg",
+  "release": "v0.6.1",
+  "binary_sha256": "cb0b4d119a4b6ef1b68942de86ad7136cd6f2cf23c2025daf9756105ceb22fd1",
+  "archive_sha256": "c12b87162393043c6d38ecb269663601f9d602a0114598ca432ad1dad3db4b4f",
+  "license": "Apache-2.0 code; CC-BY-4.0 documentation",
+  "scope": "Pinned unmodified local native BRep decoder executable used by FluxCAD; isolated processes; CAD never uploaded. Adapter and geometry verification are separate Codex/local-Qwen code."
+}
