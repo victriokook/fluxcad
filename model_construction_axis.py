@@ -70,6 +70,7 @@ class ConstructionAxis:
 
 def create(doc,kind,existing=None,**values):
     check_sources(doc,kind,existing,**values);expected=build(kind,**values)
+    if unchanged(existing,kind,**values):return existing
     solids={o.Name for o in existing.InListRecursive if hasattr(o,'Shape') and o.Shape.Solids} if existing else set()
     with model.transaction(doc,title(kind)):
         obj=existing
@@ -105,3 +106,14 @@ def create(doc,kind,existing=None,**values):
         if not existing:
             obj.ViewObject.LineColor=(.88,.48,.12);obj.ViewObject.PointColor=(.88,.48,.12);obj.ViewObject.LineWidth=3
     return obj
+
+
+def unchanged(existing, kind, **values):
+    if existing is None or existing.FluxConstructionAxis != kind or existing.Error or existing.Shape.isNull() or not existing.Shape.isValid():
+        return False
+    data = dict(reference_a=None, reference_b=None, size=80, reversed=False)
+    data.update(values)
+    if kind == 'center':
+        data['reference_b'] = None
+    data['reversed'] = bool(data['reversed'])
+    return settings(existing) == data

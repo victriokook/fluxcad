@@ -1,0 +1,79 @@
+[
+  {
+    "path": "examples/dome/Hollow-dome-demo.FCStd",
+    "source_sha256": "f31b7a9afca64f38935c3e7ad18e23b9fa906303e919048a88986a5f2513980f",
+    "published_sha256": "cee7732328f483b01f037a4e11333ccc15af84ba9087c04c9bba317a974798a7",
+    "geometry_payloads": "BYTE_IDENTICAL",
+    "metadata_change": "Document License=MIT"
+  },
+  {
+    "path": "examples/ellipse/Positioned-ellipses-demo.FCStd",
+    "source_sha256": "ccb83fc972a7c2c9e7e8e983d73e9a44aecba7ba103b5174aa07e85e3fa837e9",
+    "published_sha256": "9d5547e4d8d1c155e7ca32788e408e655dcdc38ce80386afe97c29832af71bfd",
+    "geometry_payloads": "BYTE_IDENTICAL",
+    "metadata_change": "Document License=MIT"
+  },
+  {
+    "path": "examples/plastic/Drafted-enclosure.FCStd",
+    "source_sha256": "afc3091980b58722bac1bb6fb669b3510e6ad9c901b5c3a024d481e005345e45",
+    "published_sha256": "536cce42e16f3beb7f768aadbb606c88fa5e4dd0a3107a48ea1944546df415da",
+    "geometry_payloads": "BYTE_IDENTICAL",
+    "metadata_change": "Document License=MIT"
+  },
+  {
+    "path": "examples/plastic/Gusset-enclosure.FCStd",
+    "source_sha256": "19778630dcb15971decf1662e60ceb368fac1a6bbd9e70bcc5fe04196fcae438",
+    "published_sha256": "27f76f5462de2ba46fcacb285173f9f8ed34289daaca161a00f5b30a812f2f4f",
+    "geometry_payloads": "BYTE_IDENTICAL",
+    "metadata_change": "Document License=MIT"
+  },
+  {
+    "path": "examples/plastic/Instanced-enclosures.FCStd",
+    "source_sha256": "4e7a882e0b1ab46b7ce878f15fdfd9b962bd58ae37aa97cc0d90c112e97d1ff6",
+    "published_sha256": "d0a16a0c54636e3ce0da72db1818d49869e054da7265214681eb48812da1b408",
+    "geometry_payloads": "BYTE_IDENTICAL",
+    "metadata_change": "Document License=MIT"
+  },
+  {
+    "path": "examples/plastic/Parametric-enclosure.FCStd",
+    "source_sha256": "17b5738f5256168e4897dcbdb659107bb25d507c3a8252a61b0cffeaa09ef37e",
+    "published_sha256": "05b5305bd5c135a45f9fbed6287a4e45aef9db2b2e5338baf1a7101facb932e6",
+    "geometry_payloads": "BYTE_IDENTICAL",
+    "metadata_change": "Document License=MIT"
+  },
+  {
+    "path": "examples/plastic/Plastic-case.FCStd",
+    "source_sha256": "575d30ca4be8e296cdfb8ebca15d336d6c21217f581d3d857cf4c67e3f7acbc5",
+    "published_sha256": "dad7f7ca688e613ef406f101c22131e3beed83f639e1eae6babe0013f3d677c8",
+    "geometry_payloads": "BYTE_IDENTICAL",
+    "metadata_change": "Document License=MIT"
+  },
+  {
+    "path": "examples/plastic/Plastic-enclosure.FCStd",
+    "source_sha256": "e362b6d3d84444137ae009e94361a027c4038de968959664701ecf0d21c6076f",
+    "published_sha256": "d0f232cb0ca68ff87d99f1955a1f9d5f0239a9bd94c6c03964977b8bb2131bb0",
+    "geometry_payloads": "BYTE_IDENTICAL",
+    "metadata_change": "Document License=MIT"
+  },
+  {
+    "path": "examples/plastic/Snap-hook.FCStd",
+    "source_sha256": "2346adf42f99f04d518af002c62e4dcccfc878a2b8f5dbf3bbde6385370094a3",
+    "published_sha256": "f3c412aadf93ecdf339762c3feac0329087323d5ad28d43b7253fc874804cf42",
+    "geometry_payloads": "BYTE_IDENTICAL",
+    "metadata_change": "Document License=MIT"
+  },
+  {
+    "path": "examples/plastic/Tapered-rib-demo.FCStd",
+    "source_sha256": "e42651b08dc68a0d9c5335cbd545e395ffbc38ee39b6bbdac370c35b1020bc7b",
+    "published_sha256": "8f0f0a86c0bb1410fd3f109d10f78f42a835da0ec0c679590380b244bbd1e60b",
+    "geometry_payloads": "BYTE_IDENTICAL",
+    "metadata_change": "Document License=MIT"
+  },
+  {
+    "path": "examples/sheetmetal/Bracket.FCStd",
+    "source_sha256": "c643eac84402fef6eb7a925b74780a9d3dbcdde07c9326b7feb2db28248b0d8a",
+    "published_sha256": "6de4a52c4d9e284fde3b77f06eaf3218de4d0fee76d959f38151a1734e6a007f",
+    "geometry_payloads": "BYTE_IDENTICAL",
+    "metadata_change": "Document License=MIT"
+  }
+]

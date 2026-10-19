@@ -8,6 +8,7 @@ from check_source import ROOT, check
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--output', type=Path, default=ROOT / 'dist')
+parser.add_argument('--cadmpeg', type=Path, help='Pinned decoder to include in the Windows asset only')
 args = parser.parse_args()
 files = check()
 version = (ROOT / 'VERSION').read_text(encoding='utf-8').strip()
@@ -23,6 +24,11 @@ for kind in ('windows', 'source'):
             if kind == 'windows':continue
         if kind == 'windows' and parts[0] in ('.github', 'scripts', 'tests'):continue
         data[name] = path.read_bytes()
+    if kind == 'windows' and args.cadmpeg:
+        decoder = args.cadmpeg.read_bytes()
+        pin = json.loads((ROOT/'vendor/cadmpeg/SOURCE.json').read_text())['binary_sha256']
+        assert hashlib.sha256(decoder).hexdigest() == pin, 'Decoder hash mismatch'
+        data['vendor/cadmpeg/cadmpeg.exe'] = decoder
     manifest = {name: hashlib.sha256(value).hexdigest() for name, value in sorted(data.items())}
     data['MANIFEST.json'] = json.dumps(dict(version=version, files=manifest), indent=2).encode('utf-8')
     archive = args.output / ('FluxCAD-v' + version + '-' + kind + '.zip')

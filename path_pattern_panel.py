@@ -66,6 +66,7 @@ class PathPatternPanel(FloatingPanel):
         if path:self.path.setCurrentIndex(self.path.findData(path.Name))
         values=pattern.settings(existing) if existing else pattern.validate()
         self.count.setValue(values['count']);self.distance.setValue(values['distance'])
+        self.initial_distance=(values['mode'],values['distance'],self.distance.value()) if existing else None
         self.mode.setCurrentIndex(self.mode.findData(values['mode']));self.orientation.setCurrentIndex(self.orientation.findData(values['orientation']));self.reverse.setChecked(values['reverse'])
         self.heading.setText(pattern.title()+(tr('を編集',' — Edit') if existing else ''))
         self.ws.region_picker.ticket+=1;self.ws.region_picker.clear()
@@ -75,7 +76,11 @@ class PathPatternPanel(FloatingPanel):
         return self.doc.getObject(self.body.currentData()) if self.body.currentData() else None,self.doc.getObject(self.path.currentData()) if self.path.currentData() else None
 
     def parameters(self):
-        return dict(count=self.count.value(),mode=self.mode.currentData(),distance=self.distance.value(),orientation=self.orientation.currentData(),reverse=self.reverse.isChecked())
+        distance=self.distance.value()
+        initial=getattr(self,'initial_distance',None)
+        if initial is not None and self.mode.currentData()==initial[0] and distance==initial[2]:
+            distance=initial[1]
+        return dict(count=self.count.value(),mode=self.mode.currentData(),distance=distance,orientation=self.orientation.currentData(),reverse=self.reverse.isChecked())
 
     def signature(self):
         def sig(obj):return (obj.Name,obj.Shape.hashCode(),str(obj.getGlobalPlacement()),str(getattr(obj,'Error',''))) if obj else None

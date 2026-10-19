@@ -46,6 +46,14 @@ def create(doc,base='XY',offset=10,existing=None):
     return obj
 
 
+def sketch_on_grid(doc,placement):
+    """Independent native sketch on the displayed grid, in global coordinates."""
+    with model.transaction(doc,tr('グリッド上にスケッチを作成','Create Sketch on Grid')):
+        obj=doc.addObject('Sketcher::SketchObject','Sketch');obj.Label=tr('スケッチ')
+        obj.Placement=App.Placement(placement)
+    return obj
+
+
 def sketch_on_plane(doc,plane):
     if not getattr(plane,'FluxPlane',False) or plane.Document!=doc:
         raise ValueError(tr('同じ文書内の構築平面を選択してください。'))

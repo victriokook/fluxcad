@@ -1,0 +1,8 @@
+﻿name,kind,formula
+BossDraft,angle,3 deg
+BossHeight,length,14 mm
+RibDraft,angle,4 deg
+RibHeight,length,18 mm
+RibLength,length,40 mm
+RibThickness,length,6 mm
+SnapHeight,length,RibHeight - 3 mm

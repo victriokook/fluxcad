@@ -1,0 +1,16 @@
+{
+  "status": "PASS_SCOPED_PHYSICAL_UI",
+  "version": "0.2.122-alpha",
+  "date_jst": "2026-10-19",
+  "input": "Physical Windows mouse/keyboard only; no CAD/API selection",
+  "steps": [
+    "Opened copy of the original physically drawn 16-line fixture in this full release checkout",
+    "Clicked upper missing-cell coordinate (595,561): selected only upper .12 mm2 cell",
+    "E showed six cells, sixth selected, 12 mm extrusion / 1.440 mm3 preview",
+    "Clicked Confirm; one body and extrusion history appeared",
+    "Toolbar Undo removed the body; Redo restored it",
+    "Toolbar Save cleared modified marker; dedicated test window closed normally"
+  ],
+  "limits": "This release screen check reused a previously mouse-drawn sketch. It did not redraw all models or certify every feature. Tiny-circle check in older public backport was interrupted and is not claimed here.",
+  "saved_model_sha256": "f0581ce6eb10e530736119482fa35ff5b3fed6795e524132a41b3b1bcd4f26bb"
+}

@@ -1,7 +1,9 @@
 import os, sys
 root = os.path.dirname(os.path.abspath(__file__))
-if root not in sys.path:
-    sys.path.insert(0, root)
+def prioritize_workspace(root):
+    normalized = os.path.normcase(os.path.realpath(root))
+    sys.path[:] = [root] + [p for p in sys.path if p and os.path.normcase(os.path.realpath(p)) != normalized]
+prioritize_workspace(root)
 import importlib
 import translations_en
 import i18n
@@ -13,9 +15,13 @@ import sketch_panel
 import navigation
 import navigation_cube
 import model
+import sketch_regions
+import sketch_snap
+import sketch_validation
 import region_picker
 import drag_move
 import browser
+import body_delete
 import extrude_panel
 import floating_panel
 import model_edges
@@ -38,6 +44,12 @@ import command_search
 import feature_panel
 import model_transform
 import transform_panel
+import model_scale_dimensions
+import scale_dimensions_panel
+import model_interference
+import interference_panel
+import model_plastic
+import plastic_panel
 import model_align
 import align_panel
 import model_mesh
@@ -56,15 +68,23 @@ import construction_panel
 import model_construction_axis
 import construction_axis_panel
 import fluxcad
+import parameters
+import parameter_panel
+importlib.reload(parameters)
+importlib.reload(parameter_panel)
 importlib.reload(ribbon)
 importlib.reload(grid)
 importlib.reload(sketch_panel)
 importlib.reload(navigation)
 importlib.reload(navigation_cube)
 importlib.reload(model)
+importlib.reload(sketch_regions)
+importlib.reload(sketch_snap)
+importlib.reload(sketch_validation)
 importlib.reload(region_picker)
 importlib.reload(drag_move)
 importlib.reload(browser)
+importlib.reload(body_delete)
 importlib.reload(extrude_panel)
 importlib.reload(floating_panel)
 importlib.reload(model_edges)
@@ -87,6 +107,12 @@ importlib.reload(command_search)
 importlib.reload(feature_panel)
 importlib.reload(model_transform)
 importlib.reload(transform_panel)
+importlib.reload(model_scale_dimensions)
+importlib.reload(scale_dimensions_panel)
+importlib.reload(model_interference)
+importlib.reload(interference_panel)
+importlib.reload(model_plastic)
+importlib.reload(plastic_panel)
 importlib.reload(model_align)
 importlib.reload(align_panel)
 importlib.reload(model_mesh)
@@ -105,4 +131,10 @@ importlib.reload(construction_panel)
 importlib.reload(model_construction_axis)
 importlib.reload(construction_axis_panel)
 importlib.reload(fluxcad)
+import sheetmetal_bridge
+try:
+    sheetmetal_bridge.load()
+except Exception as error:
+    import FreeCAD as App
+    App.Console.PrintWarning('FluxCAD SheetMetal: '+str(error)+'\n')
 fluxcad.start()

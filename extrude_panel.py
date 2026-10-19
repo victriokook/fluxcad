@@ -6,6 +6,7 @@ from PySide import QtCore, QtGui, QtWidgets as W
 from pivy import coin
 import model
 import browser
+from region_picker import format_region_area
 
 
 class ExtrudePanel(QtCore.QObject):
@@ -125,7 +126,7 @@ class ExtrudePanel(QtCore.QObject):
         indices = model.profile_indices(regions,[index] if isinstance(index,int) else index)
         self.profile.clear()
         for i,region in enumerate(regions):
-            item = W.QListWidgetItem(tr('領域 %d — %.2f mm²')%(i+1,region['face'].Area))
+            item = W.QListWidgetItem(tr('領域 %d — %s mm²', 'Region %d — %s mm²')%(i+1,format_region_area(region['face'].Area)))
             item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
             item.setData(QtCore.Qt.UserRole,i)
             item.setCheckState(QtCore.Qt.Checked if i in indices else QtCore.Qt.Unchecked)
@@ -289,14 +290,18 @@ class ExtrudePanel(QtCore.QObject):
     def position(self):
         if not self.active or self.closed:
             return
-        viewer=next((w for w in self.ws.main.findChildren(W.QWidget)
-                     if w.metaObject().className()=='Gui::View3DInventorViewer' and w.isVisible()),None)
-        if viewer:
-            v=viewer.viewport(); origin=v.mapTo(self.ws.main,QtCore.QPoint())
-            top=min(110,max(8,v.height()//6))
-            width=min(310,max(240,v.width()-24)); height=min(getattr(self,'preferred_height',410),max(150,v.height()-top-12))
-            self.panel.setGeometry(origin.x()+v.width()-width-12,origin.y()+top,width,height)
-            self.panel.raise_()
+        doc=Gui.activeDocument()
+        if not doc:return
+        view=doc.activeView()
+        if not hasattr(view,'graphicsView'):return
+        # Other tabs may leave a visible 400x300 viewer behind. Only the active
+        # viewport determines the available space for this document's panel.
+        v=view.graphicsView().viewport(); origin=v.mapTo(self.ws.main,QtCore.QPoint())
+        width=min(310,max(1,v.width()-24))
+        height=min(self.preferred_height,max(1,v.height()-24))
+        top=min(110,max(8,v.height()//6),max(0,v.height()-height-12))
+        self.panel.setGeometry(origin.x()+max(0,v.width()-width-12),origin.y()+top,width,height)
+        self.panel.raise_()
 
     def refresh(self):
         if not self.active:

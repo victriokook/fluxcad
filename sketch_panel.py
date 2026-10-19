@@ -64,12 +64,31 @@ class SketchPanel(QtCore.QObject):
         select.setToolTip(tr('線・長方形・トリムなどの操作を終了して、既存の線や頂点を選択します。'))
         select.clicked.connect(lambda: ws.safe(ws.select_sketch_geometry))
         layout.addWidget(select)
-        selection_help = W.QLabel(tr('線・頂点をクリックで選択\n複数選択：Ctrl＋クリック\n寸法変更：数値をダブルクリック'))
+        selection_help = W.QLabel(tr('線・頂点をクリックで選択\n複数選択：Ctrl＋クリック\n削除：線を選択して Delete\n寸法変更：数値をダブルクリック',
+                                    'Click edges/vertices to select\nMulti-select: Ctrl+click\nDelete: select edges, then Delete\nEdit dimension: double-click its value'))
         selection_help.setWordWrap(True)
         layout.addWidget(selection_help)
-        normal = W.QPushButton(tr('ビュー正面'))
+        validate = W.QPushButton(tr('スケッチを検証・修復…','Validate / Repair Sketch…'))
+        validate.setObjectName('FluxValidateSketch')
+        validate.setToolTip(tr('編集を終了して検証画面を開きます。検査だけでは形状を変更しません。',
+                               'Finish sketch editing and open validation. Inspection alone does not change geometry.'))
+        validate.clicked.connect(lambda: ws.safe(ws.validate_sketch))
+        layout.addWidget(validate)
+        self.plane_label=W.QLabel()
+        self.plane_label.setObjectName('FluxSketchPlane')
+        self.plane_label.setWordWrap(True);layout.addWidget(self.plane_label)
+        normal = self.front_button = W.QPushButton(tr('ビュー正面'))
+        normal.setObjectName('FluxSketchFront')
+        normal.setToolTip(tr('編集中のスケッチ面を正面から表示します。ズームとグリッド間隔は維持します。',
+                             'Look straight at the edited sketch plane, keeping zoom and grid spacing.'))
         normal.clicked.connect(lambda: ws.safe(lambda: ws.sketch_command('Sketcher_ViewSketch')))
         layout.addWidget(normal)
+        self.view_hint=W.QLabel(tr('スケッチ面を真横から見ています。「ビュー正面」でこの面のグリッドを表示できます。別の面に描く場合は編集を終了し、その方向に表示して「スケッチを作成」を押してください。',
+                                    'This sketch plane is viewed edge-on. Use Look At Sketch to see its grid. To draw on another plane, finish editing, switch to that view, then Create Sketch.'))
+        self.view_hint.setObjectName('FluxSketchEdgeOnHint')
+        self.view_hint.setWordWrap(True)
+        self.view_hint.setStyleSheet('color:#936011;')
+        self.view_hint.hide();layout.addWidget(self.view_hint)
         self.checks = {}
         for prop,title in [('ShowGrid',tr('スケッチ グリッド')),('GridAuto',tr('グリッド間隔を自動調整')),
                            ('Autoconstraints',tr('自動拘束')),('SectionView',tr('スライス表示'))]:
@@ -106,11 +125,16 @@ class SketchPanel(QtCore.QObject):
         self.grid_snap.toggled.connect(lambda checked: ws.safe(lambda: self.set_grid_snap(checked)))
         layout.addWidget(self.grid_snap)
         self.strong_snap = W.QCheckBox(tr('スナップを強める', 'Stronger grid snapping'))
-        self.strong_snap.setToolTip(tr('作図中、画面上で近い格子点を拾いやすくします。既存の点・線への接続を優先します。',
-                                      'Makes nearby grid points easier to capture while drawing. Existing points and edges keep priority.'))
+        self.strong_snap.setToolTip(tr('作図点を最寄りの格子点へ吸着します。拡大しても吸着し、既存の点・線への接続を優先します。',
+                                      'Snap drawing points to the nearest grid intersection, even when zoomed in. Existing points and edges keep priority.'))
         self.strong_snap.setChecked(settings.GetBool('StrongGridSnap',True))
         self.strong_snap.toggled.connect(lambda checked: settings.SetBool('StrongGridSnap',checked))
         layout.addWidget(self.strong_snap)
+        snap_hint = W.QLabel(tr('Shift＋クリック：格子点だけに固定', 'Shift + click: grid points only'))
+        snap_hint.setWordWrap(True)
+        snap_hint.setToolTip(tr('作図中はShiftでグリッドに強制吸着します。通常のスナップ設定がオフでも使えます。',
+                               'Hold Shift while drawing to force grid snapping, even when normal snapping is off.'))
+        layout.addWidget(snap_hint)
         self.info = W.QLabel()
         self.info.setWordWrap(True)
         layout.addWidget(self.info)
@@ -359,6 +383,9 @@ class SketchPanel(QtCore.QObject):
                 self.ws.ribbon_tabs.setTabVisible(self.ws.tab_indices['sketch'],False)
         if not sketch:
             return
+        self.plane_label.setText(tr('作図面：%s','Sketch plane: %s')%self.ws.grid.plane_name(sketch.getGlobalPlacement()))
+        edge_on=self.ws.grid.is_edge_on(Gui.activeDocument().activeView(),sketch.getGlobalPlacement())
+        self.view_hint.setVisible(edge_on and self.ws.grid.enabled)
         self.position_overlay()
         self.grid_snap.blockSignals(True)
         self.grid_snap.setChecked(self.snap_params.GetBool('Snap',True) and self.snap_params.GetBool('SnapToGrid',False))

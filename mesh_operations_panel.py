@@ -126,3 +126,7 @@ class MeshOperationsPanel(MeshPanel):
         for obj in results:Gui.Selection.addSelection(obj)
         self.ws.refresh();self.ws.main.statusBar().showMessage(tr('結果を作成しました。元のメッシュは非表示で残しています。Ctrl＋Zで元に戻せます。',
                                                                'Result meshes created. The hidden original is retained. Press Ctrl+Z to undo.'),10000)
+
+    def position(self):
+        self.preferred_width = 380
+        super().position()

@@ -38,6 +38,7 @@ class SplitPanel(FloatingPanel):
 
     def start(self,existing=None):
         self.cancel()
+        self.offset_original=None
         if self.ws.current_sketch():raise ValueError(tr('先にスケッチ編集を終了してください。','Finish editing the sketch first.'))
         self.doc=App.ActiveDocument
         if not self.doc:raise ValueError(tr('分割するソリッドを作成してください。','Create a solid to split.'))
@@ -69,6 +70,8 @@ class SplitPanel(FloatingPanel):
             self.mode.setCurrentIndex(3 if selected_ref else 0);self.cut_offset.setValue(0)
             if selected_ref:self.reference,self.face=selected_ref
             if self.source and not selected_ref:self.center()
+        self.offset_original=split.settings(self.existing) if self.existing else None
+        self.offset_shown=self.cut_offset.value()
         self.ws.region_picker.ticket+=1;self.ws.region_picker.clear()
         self.last_signature=self.signature();self.active=True;self.panel.show();self.update_preview();self.position()
 
@@ -77,8 +80,12 @@ class SplitPanel(FloatingPanel):
         return sig(self.source),sig(self.reference),tuple((p.Name,str(p.getGlobalPlacement())) for p in split.outputs(self.existing)) if self.existing else ()
 
     def parameters(self):
-        return dict(mode=self.mode.currentData(),reference=self.reference if self.mode.currentData()=='face' else None,
-                    face=self.face if self.mode.currentData()=='face' else '',offset=self.cut_offset.value())
+        values = dict(mode=self.mode.currentData(), reference=self.reference if self.mode.currentData() == 'face' else None,
+                      face=self.face if self.mode.currentData() == 'face' else '', offset=self.cut_offset.value())
+        original = getattr(self, 'offset_original', None)
+        if original and all(values[key] == original[key] for key in ('mode', 'reference', 'face')) and self.cut_offset.value() == self.offset_shown:
+            values['offset'] = original['offset']
+        return values
 
     def body_changed(self):
         if not self.active:return
@@ -90,6 +97,7 @@ class SplitPanel(FloatingPanel):
         self.picking=False;self.center();self.update_preview()
 
     def center(self):
+        self.offset_original=None
         try:
             if self.source:
                 values=self.parameters();values['offset']=0

@@ -136,6 +136,14 @@ class HolePanel(FloatingPanel):
                                             'Angle is the full included angle. Recess depth: %g mm')%recess)
             except ValueError:self.recess_hint.setText('')
 
+        import parameters
+        tool = self.existing.Tool if getattr(self,'existing',None) else None
+        parameters.lock_fields(tool, {'U':self.u,'V':self.v,'Diameter':self.diameter,'Depth':self.depth,
+                                     'HeadDiameter':self.head_diameter,'HeadDepth':self.head_depth,'SinkAngle':self.angle})
+        if self.mode.currentData():self.depth.setEnabled(False)
+        self.kind.setEnabled(not tool or not any(parameters.expression(tool,p) for p in ('Diameter','HeadDiameter','HeadDepth','SinkAngle')))
+        self.mode.setEnabled(not tool or not parameters.expression(tool,'Depth'))
+
     def start(self, existing=None):
         self.cancel()
         self.doc = App.ActiveDocument
@@ -147,18 +155,21 @@ class HolePanel(FloatingPanel):
         for field,key in ((self.u,'u'),(self.v,'v'),(self.diameter,'diameter'),(self.depth,'depth'),
                           (self.head_diameter,'head_diameter'),(self.head_depth,'head_depth'),(self.angle,'angle')):
             field.setValue(holes.DEFAULTS[key])
+        self.remember_position(holes.DEFAULTS['u'],holes.DEFAULTS['v'])
         self.kind.setCurrentIndex(0)
         self.mode.setCurrentIndex(0)
         self.thread_type.setCurrentIndex(0);self.thread_direction.setCurrentIndex(0)
         self.thread_full.setCurrentIndex(0);self.thread_depth.setValue(threads.DEFAULTS['thread_depth'])
         self.model_thread.setChecked(False)
         if self.thread_size.count():self.thread_size.setCurrentIndex(self.thread_size.findData(threads.DEFAULTS['thread_size']))
+        self.update_fields()  # Clear the previous feature's locks before a face pick.
         if existing:
             self.source, self.face_name = holes.source_face(existing)
             values = holes.settings(existing)
             for field,key in ((self.u,'u'),(self.v,'v'),(self.diameter,'diameter'),(self.depth,'depth'),
                               (self.head_diameter,'head_diameter'),(self.head_depth,'head_depth'),(self.angle,'angle')):
                 field.setValue(values[key])
+            self.remember_position(values['u'],values['v'])
             self.kind.setCurrentIndex(self.kind.findData(values['kind']))
             self.mode.setCurrentIndex(0 if values['through'] else 1)
             if values['kind']=='threaded':
@@ -168,7 +179,7 @@ class HolePanel(FloatingPanel):
                 self.thread_full.setCurrentIndex(0 if values['thread_full'] else 1)
                 self.thread_depth.setValue(values['thread_depth']);self.model_thread.setChecked(values['model_thread'])
             self.picking_face = False
-            self.signature = holes.signature(self.source)
+            self.signature = holes.signature(self.source, stable_frame=holes.use_stable_frame(self.existing))
         else:
             selected = Gui.Selection.getSelectionEx()
             if any(hasattr(s.Object,'Mesh') for s in selected):
@@ -184,29 +195,54 @@ class HolePanel(FloatingPanel):
                 if abs((local-origin).dot(n))>1e-5:
                     point=self.source.getGlobalPlacement().multVec(f.CenterOfMass)
                 self.set_point(point, snap=False)
-                self.signature = holes.signature(self.source); self.picking_face = False
+                self.signature = holes.signature(self.source, stable_frame=holes.use_stable_frame(self.existing)); self.picking_face = False
         self.ws.region_picker.ticket += 1; self.ws.region_picker.clear()
+        self.remember_dimensions()
         self.active = True; self.panel.show(); self.update_preview(); self.position()
 
     def pose(self):
         return self.existing.getGlobalPlacement() if self.existing else App.Placement()
 
+    def remember_position(self, u, v):
+        self.position_exact = {'u': float(u), 'v': float(v)}
+        self.position_shown = {'u': self.u.value(), 'v': self.v.value()}
+
+    def position_values(self):
+        values = {'u': self.u.value(), 'v': self.v.value()}
+        exact = getattr(self, 'position_exact', {})
+        shown = getattr(self, 'position_shown', {})
+        for key in ('u', 'v'):
+            if key in exact and key in shown and values[key] == shown[key]:
+                values[key] = exact[key]
+        return values
+
     def set_point(self, point, snap=True):
-        u,v = holes.coordinates(self.source, self.face_name, self.pose().inverse().multVec(point))
+        u, v = holes.coordinates(self.source, self.face_name, self.pose().inverse().multVec(point), stable_frame=holes.use_stable_frame(self.existing))
         if snap and self.snap.isChecked():
             step = self.step.value()
-            u,v = (math.copysign(math.floor(abs(x)/step+.5)*step,x) for x in (u,v))
-        self.u.setValue(u); self.v.setValue(v)
+            u, v = (math.copysign(math.floor(abs(x) / step + .5) * step, x) for x in (u, v))
+        previous = self.position_values()
+        if self.u.isEnabled():
+            self.u.setValue(u)
+        else:
+            u = previous['u']
+        if self.v.isEnabled():
+            self.v.setValue(v)
+        else:
+            v = previous['v']
+        self.remember_position(u, v)
 
     def parameters(self):
-        values = dict(u=self.u.value(), v=self.v.value(), diameter=self.diameter.value(),
-                    depth=self.depth.value(), through=self.mode.currentData(),kind=self.kind.currentData(),
-                    head_diameter=self.head_diameter.value(),head_depth=self.head_depth.value(),angle=self.angle.value())
-        if values['kind']=='threaded':
-            values.update(thread_type=self.thread_type.currentData(),thread_size=self.thread_size.currentData(),
-                          thread_direction=self.thread_direction.currentData(),model_thread=self.model_thread.isChecked(),
-                          thread_full=self.thread_full.currentData(),thread_depth=self.thread_depth.value())
-        return values
+        position = self.position_values()
+        values = dict(u=position['u'], v=position['v'], diameter=self.diameter.value(),
+                      depth=self.depth.value(), through=self.mode.currentData(), kind=self.kind.currentData(),
+                      head_diameter=self.head_diameter.value(), head_depth=self.head_depth.value(), angle=self.angle.value())
+        if values['kind'] == 'threaded':
+            values.update(thread_type=self.thread_type.currentData(), thread_size=self.thread_size.currentData(),
+                          thread_direction=self.thread_direction.currentData(), model_thread=self.model_thread.isChecked(),
+                          thread_full=self.thread_full.currentData(), thread_depth=self.thread_depth.value())
+        values['stable_frame'] = holes.use_stable_frame(self.existing)
+        return self.dimension_values(values)
 
     def select_face(self):
         if self.active:self.picking_face=True;self.update_preview()
@@ -233,9 +269,9 @@ class HolePanel(FloatingPanel):
                 distance,source,name,hit = min(hits,key=lambda x:x[0])
                 holes.frame(source,name)  # Reject the front curved face, never pick through it.
                 self.source,self.face_name = source,name
-                self.signature=holes.signature(source);self.picking_face=False
+                self.signature=holes.signature(source, stable_frame=holes.use_stable_frame(self.existing));self.picking_face=False
             else:
-                if holes.signature(self.source)!=self.signature:
+                if holes.signature(self.source, stable_frame=holes.use_stable_frame(self.existing))!=self.signature:
                     raise ValueError(tr('元の形状が変更されました。「面を選び直す」を押してください。',
                                         'The source changed. Click Reselect Face.'))
                 face,center,a,b,n = holes.frame(self.source,self.face_name)
@@ -252,7 +288,8 @@ class HolePanel(FloatingPanel):
             self.status.setStyleSheet('color:#ac3830;');self.status.setText(str(error))
 
     def marker(self):
-        center,u,v,n = holes.placement_frame(self.source,self.face_name,self.u.value(),self.v.value())
+        position=self.position_values()
+        center,u,v,n = holes.placement_frame(self.source,self.face_name,position['u'],position['v'], stable_frame=holes.use_stable_frame(self.existing))
         pose=self.pose();center=pose.multVec(center);u=pose.Rotation.multVec(u);v=pose.Rotation.multVec(v);n=pose.Rotation.multVec(n)
         center+=n*.003
         radii=[self.diameter.value()/2]
@@ -292,7 +329,7 @@ class HolePanel(FloatingPanel):
                 self.status.setStyleSheet('color:#245b73;')
                 self.status.setText(tr('穴を開ける平らな面をクリックしてください。', 'Click the planar face to drill.'))
                 return
-            if holes.signature(self.source)!=self.signature:
+            if holes.signature(self.source, stable_frame=holes.use_stable_frame(self.existing))!=self.signature:
                 raise ValueError(tr('元の形状が変更されました。「面を選び直す」を押してください。', 'The source changed. Click Reselect Face.'))
             result=holes.preview(self.source,self.face_name,**self.parameters())
             result.Placement=self.pose().multiply(result.Placement)
@@ -328,7 +365,7 @@ class HolePanel(FloatingPanel):
         try:
             if App.ActiveDocument!=self.doc or self.ws.current_sketch() or (self.source and not self.source.Document) or (self.existing and not self.existing.Document):
                 self.cancel();return
-            if self.source and not self.picking_face and holes.signature(self.source)!=self.signature and self.valid:self.update_preview()
+            if self.source and not self.picking_face and holes.signature(self.source, stable_frame=holes.use_stable_frame(self.existing))!=self.signature and self.valid:self.update_preview()
         except (RuntimeError,ReferenceError):self.cancel();return
         self.position()
 
@@ -344,3 +381,16 @@ class HolePanel(FloatingPanel):
                     self.pick(widget,event.position())
                 return True
         return super().eventFilter(widget,event)
+
+    def remember_dimensions(self):
+        keys = ('diameter', 'depth', 'head_diameter', 'head_depth', 'angle', 'thread_depth')
+        self.dimension_exact = holes.settings(self.existing) if self.existing else {}
+        self.dimension_shown = {key: getattr(self, key).value() for key in keys}
+
+    def dimension_values(self, values):
+        exact = getattr(self, 'dimension_exact', {})
+        shown = getattr(self, 'dimension_shown', {})
+        for key in ('diameter', 'depth', 'head_diameter', 'head_depth', 'angle', 'thread_depth'):
+            if key in values and key in exact and key in shown and getattr(self, key).value() == shown[key]:
+                values[key] = exact[key]
+        return values

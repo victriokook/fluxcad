@@ -7,6 +7,7 @@ language=os.environ.get('FLUXCAD_TEST_LANGUAGE','ja')
 sys.path.insert(0,str(root))
 import FreeCAD as App,FreeCADGui as Gui,Part
 from PySide import QtCore,QtGui,QtWidgets as W
+W.QApplication.instance().setQuitOnLastWindowClosed(False)
 main=Gui.getMainWindow()
 main.hide();main.setWindowOpacity(0)
 main.setWindowFlag(QtCore.Qt.WindowTransparentForInput,True)

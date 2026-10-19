@@ -1,0 +1,7 @@
+﻿name,kind,formula
+CenterY,length,10 mm
+Gap,length,70 mm
+Height,length,20 mm
+LeftX,length,-Gap / 2
+RightX,length,Gap / 2
+Width,length,40 mm

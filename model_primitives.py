@@ -4,24 +4,26 @@ import FreeCAD as App
 import Part
 import model
 import model_sections
+import model_dome
 from i18n import tr
 
-KINDS=('sphere','torus','coil','pipe')
+KINDS=('sphere','torus','coil','pipe','dome')
 
 
 def title(kind):
-    return {'sphere':tr('球','Sphere'),'torus':tr('トーラス','Torus'),
+    return {'dome':tr('ドーム','Dome'),'sphere':tr('球','Sphere'),'torus':tr('トーラス','Torus'),
             'coil':tr('コイル','Coil'),'pipe':tr('パイプ','Pipe')}[kind]
 
 
 def defaults(kind):
-    return dict(sphere=dict(diameter=20),torus=dict(diameter=30,section=6),
+    return dict(dome=dict(width=60,depth=40,height=15,thickness=0),sphere=dict(diameter=20),torus=dict(diameter=30,section=6),
                 coil=dict(diameter=30,section=3,pitch=6,turns=4,left=False),
                 pipe=dict(diameter=10,wall=1,length=30,path=None))[kind].copy()
 
 
 def settings(obj):
     kind=obj.FluxPrimitive
+    if kind=='dome':return model_dome.settings(obj)
     if kind=='sphere':return dict(diameter=obj.Radius.Value*2)
     if kind=='torus':return dict(diameter=obj.Radius1.Value*2,section=obj.Radius2.Value*2)
     if kind=='coil':return dict(diameter=obj.Diameter.Value,section=obj.Section.Value,
@@ -37,6 +39,7 @@ def number(value,label,minimum=.001,maximum=100000):
 
 
 def validate(kind,values):
+    if kind=='dome':return model_dome.validate(values)
     if kind not in KINDS:raise ValueError('Unknown primitive: '+str(kind))
     result=defaults(kind)
     if set(values)-set(result):raise ValueError('Unknown primitive parameters')
@@ -74,6 +77,7 @@ def swept_disk(spine,radius,frenet=False):
 
 
 def shape(kind,**values):
+    if kind=='dome':return check_solid(model_dome.shape(**values))
     p=validate(kind,values);radius=p['diameter']/2
     try:
         if kind=='sphere':result=Part.makeSphere(radius)
@@ -139,6 +143,8 @@ def create(doc,kind,existing=None,pose=None,**values):
     pose=App.Placement(pose if pose is not None else existing.Placement if existing else App.Placement())
     if not all(math.isfinite(v) for v in tuple(pose.Base)+tuple(pose.Rotation.Q)):
         raise ValueError(tr('位置に有限の数値を指定してください。','Placement must contain finite numbers.'))
+    import primitive_precision
+    primitive_precision.check_placement(existing,pose)
     expected=local.copy();expected.Placement=pose.multiply(expected.Placement)
     solid_dependents={o.Name for o in existing.InListRecursive if hasattr(o,'Shape') and o.Shape.Solids} if existing else set()
     with model.transaction(doc,title(kind)):
@@ -147,6 +153,8 @@ def create(doc,kind,existing=None,pose=None,**values):
             obj=doc.addObject({'sphere':'Part::Sphere','torus':'Part::Torus'}.get(kind,'Part::FeaturePython'),kind.title())
             obj.Label=title(kind)
             obj.addProperty('App::PropertyString','FluxPrimitive','FluxCAD');obj.FluxPrimitive=kind;obj.setEditorMode('FluxPrimitive',2)
+            if kind=='dome':
+                model_dome.setup(obj);PrimitiveProxy(obj);obj.ViewObject.Proxy=0
             if kind in ('coil','pipe'):
                 for typ,key in [('App::PropertyLength','Diameter')]+(
                     [('App::PropertyLength','Section'),('App::PropertyLength','Pitch'),('App::PropertyFloat','Turns'),('App::PropertyBool','LeftHanded')]
@@ -157,6 +165,7 @@ def create(doc,kind,existing=None,pose=None,**values):
                 PrimitiveProxy(obj);obj.ViewObject.Proxy=0
         if kind=='sphere':obj.Radius=p['diameter']/2;obj.Angle1=-90;obj.Angle2=90;obj.Angle3=360
         elif kind=='torus':obj.Radius1=p['diameter']/2;obj.Radius2=p['section']/2;obj.Angle1=-180;obj.Angle2=180;obj.Angle3=360
+        elif kind=='dome':model_dome.assign(obj,p)
         elif kind=='coil':
             obj.Diameter=p['diameter'];obj.Section=p['section'];obj.Pitch=p['pitch'];obj.Turns=p['turns'];obj.LeftHanded=p['left']
         else:

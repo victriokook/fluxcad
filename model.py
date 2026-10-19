@@ -1,4 +1,4 @@
-"""Native, serializable FreeCAD features. No custom document proxies."""
+"""Parametric FreeCAD solids with persistent FluxCAD sketch profiles."""
 from i18n import tr
 import FreeCAD as App
 import Part
@@ -66,16 +66,27 @@ def profiles(sketch):
     if sketch.TypeId != 'Sketcher::SketchObject':
         raise ValueError(tr('閉じたスケッチを1つ選択してください。'))
     sketch.Document.recompute()
-    if any(not wire.isClosed() for wire in sketch.Shape.Wires):
+    wires = sketch.Shape.Wires
+    simple = []
+    for wire in wires:
+        if wire.isClosed():
+            face = Part.Face(wire)
+            if face.isValid() and face.Area > 1e-9:
+                simple.append(wire)
+    # Closed polylines can cross themselves too. A single invalid face used to
+    # suppress every region in the sketch, including a valid rectangle.
+    if len(simple) != len(wires):
         import sketch_regions
-        closed = _closed_profiles(sketch) if any(w.isClosed() for w in sketch.Shape.Wires) else []
-        return sketch_regions.profiles(sketch, closed)
-    return _closed_profiles(sketch)
+        closed = _closed_profiles(sketch, simple) if simple else []
+        return sketch_regions.profiles(sketch, closed, simple)
+    import sketch_regions
+    return sketch_regions.nested_regions(sketch, _closed_profiles(sketch))
 
 
-def _closed_profiles(sketch):
+def _closed_profiles(sketch, wires=None):
     """Filled cells of closed contours; nested loops remain holes."""
-    wires = [wire for wire in sketch.Shape.Wires if wire.isClosed()]
+    if wires is None:
+        wires = [wire for wire in sketch.Shape.Wires if wire.isClosed()]
     if not wires:
         raise ValueError(tr('閉じた輪郭がありません。線の端点をつないでください。'))
     # Group nested loops before splitting crossings, so existing holes stay holes.
@@ -184,34 +195,17 @@ def _internal(obj):
 
 
 def _split_profile_source(doc,sketch,region):
-    """Keep the selected fragment linked using FreeCAD's built-in features."""
-    if region.get('network'):
-        import sketch_regions
-        return sketch_regions.source(doc,sketch,region)
-    from BOPTools import SplitFeatures
-    inputs = [_internal(_profile_binder(doc,sketch,r['edges'],tr('輪郭面 (%s)')%sketch.Label))
-              for r in region['inputs']]
-    fragments = doc.addObject('Part::FeaturePython','SketchRegions')
-    SplitFeatures.FeatureBooleanFragments(fragments)
-    if App.GuiUp:
-        SplitFeatures.ViewProviderBooleanFragments(fragments.ViewObject)
-    fragments.Label = tr('スケッチの交差領域')
-    fragments.Objects = inputs
-    fragments.Mode = 'Standard'
-    _internal(fragments)
-    doc.recompute()
-    target = region['face'].copy()
-    target.Placement = sketch.getGlobalPlacement().multiply(sketch.Placement.inverse()).multiply(target.Placement)
-    tolerance = max(1e-8,target.Area*1e-7)
-    matches = [i for i,face in enumerate(fragments.Shape.Faces)
-               if abs(face.Area-target.Area)<=tolerance and abs(face.common(target).Area-target.Area)<=tolerance]
-    if len(matches)!=1:
-        raise ValueError(tr('選択した交差領域を特定できません。領域を選び直してください。'))
-    return _internal(_profile_binder(doc,fragments,['Face%d'%(matches[0]+1)],tr('押し出し領域 (%s)')%sketch.Label))
+    """Keep all sketch profiles attached to persistent geometry identities."""
+    import sketch_regions
+    return sketch_regions.source(doc,sketch,region)
 
 
 def extrude(doc, sketch, length, profile_edges=None, profile_index=None):
     regions = profiles(sketch)
+    if profile_edges is None and profile_index is None:
+        material = [i for i, region in enumerate(regions) if not region.get('nested_cell')]
+        if len(material) == 1:
+            profile_index = material[0]
     if len(regions)>1 and profile_edges is None and profile_index is None:
         raise ValueError(tr('複数の領域があります。押し出す輪郭の辺を選択してください。'))
     source = sketch
@@ -220,11 +214,7 @@ def extrude(doc, sketch, length, profile_edges=None, profile_index=None):
         if not isinstance(index,int) or not 0<=index<len(regions):
             raise ValueError(tr('領域を選び直してください。'))
         region = regions[index]
-        # Use the COMPLETE region, including its inner boundaries, never a lone edge.
-        if 'inputs' in region:
-            source = _split_profile_source(doc,sketch,region)
-        elif len(regions)>1 or sketch.getParentGeoFeatureGroup():
-            source = _profile_binder(doc,sketch,region['edges'],tr('押し出し領域 (%s)')%sketch.Label)
+        source = _split_profile_source(doc,sketch,region)
         if source!=sketch:
             doc.recompute()
             if source.Shape.isNull() or len(source.Shape.Faces)!=1:
@@ -534,24 +524,23 @@ def movable_solids(doc, objects, allow_mesh=False):
         if allow_mesh:
             import model_mesh
             if model_mesh.is_mesh(obj):
-                for mesh in model_mesh.targets(doc,[obj]):
-                    if mesh not in result:result.append(mesh)
+                for mesh in model_mesh.targets(doc, [obj]):
+                    if mesh not in result:
+                        result.append(mesh)
                 continue
-        if (obj.Document != doc or not hasattr(obj,'Shape') or
-                obj.Shape.isNull() or not obj.Shape.Solids):
+        if obj.Document != doc or not hasattr(obj, 'Shape') or obj.Shape.isNull() or (not obj.Shape.Solids):
             raise ValueError(tr('同じ文書内の立体を選択してください。スケッチは移動対象に含められません。'))
         if obj.isDerivedFrom('PartDesign::Feature'):
             body = obj.getParentGeoFeatureGroup()
             if body and body.isDerivedFrom('PartDesign::Body'):
                 obj = body
-        if getattr(obj,'FluxSplit',False):
-            raise ValueError(tr('ブラウザーで分割後のボディを選択して移動してください。','Select the resulting bodies in the browser to move them.'))
-        if not hasattr(obj,'Placement'):
+        if getattr(obj, 'FluxSplit', False):
+            raise ValueError(tr('ブラウザーで分割後のボディを選択して移動してください。', 'Select the resulting bodies in the browser to move them.'))
+        if not hasattr(obj, 'Placement'):
             raise ValueError(tr('%s の位置は変更できません。') % obj.Label)
-        if getattr(obj,'FluxComponent',False) and (obj.Grounded or obj.Driver):
-            raise ValueError(tr('接地された部品は接地を解除してください。接続された部品はジョイントの角度・距離を編集するか、ジョイントを解除してください。',
-                                'Unground fixed components. For connected components, edit the joint angle/distance or release the joint.'))
-        if any(path=='Placement' or path.startswith('Placement.') for path,value in obj.ExpressionEngine):
+        if getattr(obj, 'FluxComponent', False) and (obj.Grounded or obj.Driver):
+            raise ValueError(tr('接地された部品は接地を解除してください。接続された部品はジョイントの角度・距離を編集するか、ジョイントを解除してください。', 'Unground fixed components. For connected components, edit the joint angle/distance or release the joint.'))
+        if any((path.lstrip('.') == 'Placement' or path.lstrip('.').startswith('Placement.') for path, value in obj.ExpressionEngine)):
             raise ValueError(tr('%s の配置は式で制御されています。配置の式を解除してから移動してください。') % obj.Label)
         if obj not in result:
             result.append(obj)

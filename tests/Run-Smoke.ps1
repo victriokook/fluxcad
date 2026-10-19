@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory=$true)][string]$FreeCADPath,
     [ValidateSet('ja','en')][string]$Language = 'ja',
+    [ValidateSet('smoke','current_features')][string]$Test = 'smoke',
     [string]$OutputDirectory,
     [int]$TimeoutSeconds = 180
 )
@@ -23,7 +24,7 @@ try {
     $env:FLUXCAD_TEST_LANGUAGE=$Language
     $reportPath=Join-Path $testOutput 'report.json'
     if(Test-Path -LiteralPath $reportPath){Remove-Item -LiteralPath $reportPath}
-    $macro=Join-Path $PSScriptRoot 'smoke.FCMacro'
+    $macro=Join-Path $PSScriptRoot ($Test+'.FCMacro')
     $process=Start-Process -FilePath $FreeCADPath -WindowStyle Hidden -ArgumentList @('--user-cfg',('"'+$testConfig+'/user.cfg"'),('"'+$macro+'"')) -RedirectStandardError (Join-Path $testOutput 'stderr.log') -RedirectStandardOutput (Join-Path $testOutput 'stdout.log') -PassThru
     if(-not $process.WaitForExit($TimeoutSeconds*1000)){throw ('Smoke test timeout; isolated FreeCAD PID: '+$process.Id)}
     $report=Get-Content -LiteralPath $reportPath -Raw -Encoding UTF8 | ConvertFrom-Json

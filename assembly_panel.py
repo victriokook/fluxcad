@@ -172,9 +172,10 @@ class JointPanel(AssemblyPanel):
         for field,value in zip(fields,values):field.setValue(value)
         self.raw[key]=(tuple(values),tuple(field.value() for field in fields))
 
-    def get_vector(self,key):
-        fields=self.origin if key=='origin' else self.vector;shown=tuple(field.value() for field in fields)
-        raw,original=self.raw[key];return raw if shown==original else shown
+    def get_vector(self, key):
+        fields = self.origin if key == 'origin' else self.vector
+        raw, original = self.raw[key]
+        return tuple(value if field.value() == shown else field.value() for field, value, shown in zip(fields, raw, original))
 
     def start(self,kind='rigid',existing=None):
         self.cancel();self.doc=App.ActiveDocument;self.existing=existing;self.picking=False
@@ -198,6 +199,7 @@ class JointPanel(AssemblyPanel):
         self.minimum.setValue(values['minimum']);self.maximum.setValue(values['maximum'])
         self.distance.setValue(values['distance']);self.distance_limited.setChecked(values['distance_limited'])
         self.distance_minimum.setValue(values['distance_minimum']);self.distance_maximum.setValue(values['distance_maximum'])
+        self.scalar_baseline={key:(values[key],getattr(self,key).value()) for key in ('angle','minimum','maximum','distance','distance_minimum','distance_maximum')} if existing else {}
         self.heading.setText(tr('ジョイントを編集','Edit Joint') if existing else tr('現在の位置でジョイント','As-built Joint'))
         self.signatures={o.Name:self.signature(o) for o in self.candidates}
         Gui.Selection.addObserver(self);self.observing=True;self.begin()
@@ -208,9 +210,9 @@ class JointPanel(AssemblyPanel):
     def values(self):
         direction=self.get_vector('axis') if self.axis.currentData()=='custom' else {'X':(1,0,0),'Y':(0,1,0),'Z':(0,0,1)}[self.axis.currentData()]
         return assembly.parameters(kind=self.kind.currentData(),origin=self.get_vector('origin'),axis=direction,
-                                   angle=self.angle.value(),limited=self.limited.isChecked(),minimum=self.minimum.value(),maximum=self.maximum.value(),
-                                   distance=self.distance.value(),distance_limited=self.distance_limited.isChecked(),
-                                   distance_minimum=self.distance_minimum.value(),distance_maximum=self.distance_maximum.value())
+                                   angle=self.scalar_value('angle'),limited=self.limited.isChecked(),minimum=self.scalar_value('minimum'),maximum=self.scalar_value('maximum'),
+                                   distance=self.scalar_value('distance'),distance_limited=self.distance_limited.isChecked(),
+                                   distance_minimum=self.scalar_value('distance_minimum'),distance_maximum=self.scalar_value('distance_maximum'))
 
     def motion_fields(self):
         return ((self.distance,self.distance_limited,self.distance_minimum,self.distance_maximum,50) if self.kind.currentData()=='slider'
@@ -331,3 +333,8 @@ class JointPanel(AssemblyPanel):
             result=assembly.create_joint(self.doc,moving,target,self.existing,**self.values())
             self.unobserve();self.finish([result])
         except Exception as error:self.valid=False;self.accept_button.setEnabled(False);self.status.setText(str(error))
+
+    def scalar_value(self, key):
+        value = getattr(self, key).value()
+        baseline = self.scalar_baseline.get(key)
+        return baseline[0] if baseline is not None and value == baseline[1] else value

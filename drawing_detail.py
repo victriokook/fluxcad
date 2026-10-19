@@ -116,13 +116,23 @@ def view_settings(ws):
         cut.currentIndexChanged.connect(pattern_enabled);pattern_enabled()
     note=W.QLabel(tr('X・Yは用紙左下からのmm（投影グループ内ではグループからの相対位置）。',
                        'X/Y are mm from the sheet lower-left, or relative to a projection group.'));note.setWordWrap(True);f.addRow(note)
+    baseline={field:(field.value(),original) for field,original in ((x,obj.X.Value),(y,obj.Y.Value),(width,obj.ViewObject.LineWidth.Value))}
+    if cut:
+        baseline.update({hscale:(hscale.value(),obj.HatchScale),rotation:(rotation.value(),obj.HatchRotation)})
     drawing.buttons(f,d)
     if d.exec_():
         with model.transaction(doc,tr('図の配置と表示','View Placement and Display')):
-            obj.Caption=caption.text();obj.X=x.value();obj.Y=y.value();obj.ViewObject.LineWidth=width.value()
+            obj.Caption=caption.text();obj.X=display_value(x,baseline);obj.Y=display_value(y,baseline);obj.ViewObject.LineWidth=display_value(width,baseline)
             if background.isChecked():obj.ViewObject.FaceColor=(1.0,1.0,1.0)
             elif obj.ViewObject.FaceColor[:3]==(1.0,1.0,1.0):obj.ViewObject.FaceColor=(.945,.953,.961)
             if cut:
-                obj.CutSurfaceDisplay=cut.currentData();obj.NameGeomPattern=pattern.currentText();obj.HatchScale=hscale.value();obj.HatchRotation=rotation.value()
+                obj.CutSurfaceDisplay=cut.currentData();obj.NameGeomPattern=pattern.currentText();obj.HatchScale=display_value(hscale,baseline);obj.HatchRotation=display_value(rotation,baseline)
         page.requestPaint()
     d.deleteLater();drawing.show(ws,page)
+
+
+
+def display_value(field, baseline):
+    displayed, original = baseline[field]
+    value = field.value()
+    return original if value == displayed else value

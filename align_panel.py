@@ -1,4 +1,4 @@
-"""Pick two native faces and preview a precise body alignment."""
+"""Pick two native faces or vertices and preview a precise body alignment."""
 from i18n import tr
 import FreeCAD as App
 import FreeCADGui as Gui
@@ -21,22 +21,24 @@ class AlignPanel(FloatingPanel):
 
     def build_fields(self,form):
         self.pick_buttons={}
-        for key,title in [('source',tr('移動する面')),('target',tr('合わせ先の面'))]:
-            button=W.QToolButton();button.setText(tr('面を選択'));button.setCheckable(True)
+        for key,title in [('source',tr('移動する面／頂点','Source Face / Vertex')),('target',tr('合わせ先の面／頂点','Target Face / Vertex'))]:
+            button=W.QToolButton();button.setText(tr('面／頂点を選択','Select Face / Vertex'));button.setCheckable(True)
             button.setSizePolicy(W.QSizePolicy.Ignored,W.QSizePolicy.Fixed)
             button.clicked.connect(lambda checked=False,k=key:self.begin_pick(k))
             form.addRow(title,button);self.pick_buttons[key]=button
         self.details=W.QLabel();self.details.setWordWrap(True);self.details.setSizePolicy(W.QSizePolicy.Ignored,W.QSizePolicy.Minimum);form.addRow(self.details)
         self.mode=W.QComboBox();self.mode.addItem(tr('面の中心を合わせる'),True);self.mode.addItem(tr('平面のみを合わせる'),False)
-        form.addRow(tr('位置'),self.mode)
+        self.mode_label=W.QLabel(tr('位置'));form.addRow(self.mode_label,self.mode)
         self.direction=W.QComboBox();self.direction.addItem(tr('面を向かい合わせる'),True);self.direction.addItem(tr('同じ向きにそろえる'),False)
-        form.addRow(tr('向き'),self.direction)
+        self.direction_label=W.QLabel(tr('向き'));form.addRow(self.direction_label,self.direction)
         self.gap_label=W.QLabel(tr('すき間'));self.gap=TransformPanel.number();form.addRow(self.gap_label,self.gap)
         self.angle_label=W.QLabel(tr('面内の回転'))
         self.angle=TransformPanel.number(' °',-360,360);self.angle.setSingleStep(90);form.addRow(self.angle_label,self.angle)
         tools=W.QWidget();row=W.QHBoxLayout(tools);row.setContentsMargins(0,0,0,0)
-        for title,callback in [(tr('反転'),self.flip),('+90°',self.quarter_turn),(tr('面を入れ替え'),self.swap)]:
+        self.rotation_buttons=[]
+        for title,callback in [(tr('反転'),self.flip),('+90°',self.quarter_turn),(tr('選択を入れ替え','Swap Selection'),self.swap)]:
             button=W.QToolButton();button.setText(title);button.clicked.connect(callback);row.addWidget(button)
+            if callback!=self.swap:self.rotation_buttons.append(button)
         row.addStretch();form.addRow(tools)
         self.copy=W.QCheckBox(tr('コピーを作成'));self.copy.toggled.connect(self.schedule);form.addRow(self.copy)
         self.note=W.QLabel();self.note.setWordWrap(True);form.addRow(self.note)
@@ -44,9 +46,12 @@ class AlignPanel(FloatingPanel):
         self.combos=(self.mode,self.direction);self.spins=(self.gap,self.angle)
 
     def update_fields(self):
-        geometry=align.kind(align.face(*self.refs['source'])) if 'source' in self.refs else 'plane'
-        cylinder=geometry=='cylinder'
-        self.heading.setText(tr('位置合わせ — 同軸','Align — Coaxial') if cylinder else tr('位置合わせ'))
+        geometry=align.kind(align.element(*self.refs['source'])) if 'source' in self.refs else 'plane'
+        cylinder=geometry=='cylinder';point=geometry=='vertex'
+        for field in (self.mode_label,self.mode,self.direction_label,self.direction,self.gap_label,self.gap,
+                      self.angle_label,self.angle,*self.rotation_buttons):field.setVisible(not point)
+        self.heading.setText(tr('位置合わせ — 頂点','Align — Point to Point') if point else
+                             tr('位置合わせ — 同軸','Align — Coaxial') if cylinder else tr('位置合わせ'))
         self.mode.setItemText(0,tr('軸方向の中央を合わせる','Match Axial Midpoints') if cylinder else tr('面の中心を合わせる'))
         self.mode.setItemText(1,tr('軸方向の位置を保持','Keep Axial Position') if cylinder else tr('平面のみを合わせる'))
         self.direction.setItemText(0,tr('軸を逆向きにそろえる','Opposite Axis Directions') if cylinder else tr('面を向かい合わせる'))
@@ -55,7 +60,9 @@ class AlignPanel(FloatingPanel):
         self.angle_label.setText(tr('軸まわりの回転','Axial Rotation') if cylinder else tr('面内の回転'))
         if geometry!=self.geometry_kind:
             self.geometry_kind=geometry;self.direction.setCurrentIndex(1 if cylinder else 0)
-        self.note.setText(tr('円筒の側面どうしを選択します。\n基準は選択面の軸方向の中央です。緑の＋矢印の方向がオフセットの正方向です。\n位置合わせ後の追従や固定は行いません。コピーは独立した形状になります。',
+        self.note.setText(tr('移動するボディの頂点 → 合わせ先の頂点の順にクリック。\n向きと寸法を保ち、2点が重なる位置へ移動します。グリッドには丸めません。\nオレンジが移動元、緑が合わせ先です。追従や固定は行いません。コピーは独立した形状になります。',
+                            'Click a vertex on the moving body, then the target vertex.\nThe points coincide without changing orientation or dimensions. No grid rounding is applied.\nOrange marks the source; green marks the target. No ongoing constraint is created. Copies are independent.') if point else
+                          tr('円筒の側面どうしを選択します。\n基準は選択面の軸方向の中央です。緑の＋矢印の方向がオフセットの正方向です。\n位置合わせ後の追従や固定は行いません。コピーは独立した形状になります。',
                             'Select two cylindrical side faces.\nOffsets use the axial midpoint of each selected face. The green + arrow indicates the positive offset direction.\nAlignment does not create an ongoing constraint. Copies are independent.') if cylinder else
                           tr('移動する面 → 合わせ先の面の順にクリック。\nすき間は合わせ先の面の外向きが正です。\n位置合わせ後の追従や固定は行いません。コピーは独立した形状になります。'))
 
@@ -68,7 +75,8 @@ class AlignPanel(FloatingPanel):
         for sel in Gui.Selection.getSelectionEx():
             for sub in sel.SubElementNames:
                 faces.append(align.reference(self.doc,sel.ObjectName,sub))
-        if len(faces)>2:raise ValueError(tr('面は移動する面と合わせ先の面の2つを選択してください。'))
+        if len(faces)>2:raise ValueError(tr('移動元と合わせ先の2つの面、または2つの頂点を選択してください。',
+                                           'Select only two faces or two vertices: the source and the target.'))
         for key,ref in zip(('source','target'),faces):
             self.refs[key]=ref;self.signatures[key]=align.signature(ref[0])
         self.heading.setText(tr('位置合わせ'))
@@ -94,7 +102,7 @@ class AlignPanel(FloatingPanel):
                 if role=='target' and 'source' in self.refs:
                     align.prepare(self.doc,self.refs['source'],ref,copy=self.copy.isChecked(),**self.parameters())
                 self.refs[role]=ref;self.signatures[role]=align.signature(ref[0]);self.ticket+=1
-                if role=='source' and 'target' in self.refs and align.kind(align.face(*ref))!=align.kind(align.face(*self.refs['target'])):
+                if role=='source' and 'target' in self.refs and align.kind(align.element(*ref))!=align.kind(align.element(*self.refs['target'])):
                     self.refs.pop('target');self.signatures.pop('target')
                 self.picking='target' if role=='source' and 'target' not in self.refs else None
                 Gui.Selection.clearSelection();self.update_preview()
@@ -117,7 +125,7 @@ class AlignPanel(FloatingPanel):
         self.ticket+=1;self.picking=None;self.update_preview()
 
     def axis_marker(self,ref):
-        selected=align.face(*ref)
+        selected=align.element(*ref)
         if align.kind(selected)!='cylinder' or not self.overlay:return
         origin,axis=align.cylinder_axis(selected)
         u0,u1,v0,v1=selected.ParameterRange
@@ -136,6 +144,20 @@ class AlignPanel(FloatingPanel):
         text=coin.SoText2();text.string='+';node.addChild(text)
         self.overlay[1].addChild(node)
 
+    def point_marker(self,ref,color):
+        selected=align.element(*ref)
+        if align.kind(selected)!='vertex':return
+        if not self.overlay:
+            graph=Gui.activeDocument().activeView().getSceneGraph();node=coin.SoSeparator()
+            pick=coin.SoPickStyle();pick.style=coin.SoPickStyle.UNPICKABLE;node.addChild(pick)
+            graph.addChild(node);self.overlay=(graph,node)
+        node=coin.SoSeparator();light=coin.SoLightModel();light.model=coin.SoLightModel.BASE_COLOR;node.addChild(light)
+        material=coin.SoMaterial();material.diffuseColor=color;material.transparency=0;node.addChild(material)
+        style=coin.SoDrawStyle();style.pointSize=9;node.addChild(style)
+        coords=coin.SoCoordinate3();coords.point.setValue(tuple(selected.Point));node.addChild(coords)
+        points=coin.SoPointSet();points.numPoints=1;node.addChild(points)
+        self.overlay[1].addChild(node)
+
     def update_preview(self):
         self.timer.stop()
         if not self.active:return
@@ -143,31 +165,41 @@ class AlignPanel(FloatingPanel):
         self.clear_preview();self.valid=False;self.accept_button.setEnabled(False)
         details=[]
         for key,title in [('source',tr('移動')),('target',tr('合わせ先'))]:
-            ref=self.refs.get(key);text=ref[0].Label+' / '+ref[1] if ref else tr('面を選択')
+            ref=self.refs.get(key);text=ref[0].Label+' / '+ref[1] if ref else tr('面／頂点を選択','Select Face / Vertex')
             button=self.pick_buttons[key];button.setText(text);button.setToolTip(text);button.setChecked(self.picking==key)
             if ref:details.append(title+'：'+text)
         self.details.setText('\n'.join(details))
         try:
             self.update_fields()
             for key,(obj,name) in self.refs.items():
-                if align.signature(obj)!=self.signatures[key]:raise ValueError(tr('選択した形状が変更されました。「面を選択」から選び直してください。'))
+                if align.signature(obj)!=self.signatures[key]:raise ValueError(tr('選択した形状が変更されました。選択ボタンから選び直してください。',
+                                                                                  'The selected shape has changed. Use the selection buttons to pick it again.'))
             if self.picking or len(self.refs)!=2:
                 self.status.setStyleSheet('color:#245b73;')
-                self.status.setText(tr('移動するボディの平面または円筒の側面をクリックしてください。',
-                                       'Click a planar face or cylindrical side face on the body to move.') if self.picking=='source' else
+                self.status.setText(tr('移動するボディの頂点、平面、または円筒の側面をクリックしてください。',
+                                       'Click a vertex, planar face or cylindrical side face on the body to move.') if self.picking=='source' else
+                                    tr('合わせ先の頂点をクリックしてください。','Click the target vertex.') if self.geometry_kind=='vertex' else
                                     tr('合わせ先の円筒の側面をクリックしてください。','Click the cylindrical side face of the target.') if self.geometry_kind=='cylinder' else
                                     tr('合わせ先の平らな面をクリックしてください。'))
                 if 'source' in self.refs:
-                    self.show_shape(align.face(*self.refs['source']),'new');self.axis_marker(self.refs['source'])
+                    if self.geometry_kind=='vertex':self.point_marker(self.refs['source'],(.95,.55,.1))
+                    else:
+                        self.show_shape(align.face(*self.refs['source']),'new');self.axis_marker(self.refs['source'])
                 return
             moving,pose=align.prepare(self.doc,self.refs['source'],self.refs['target'],copy=self.copy.isChecked(),**self.parameters())
             self.show_shape(transforms.shapes([moving],pose)[0],'new')
             self.axis_marker(self.refs['target'])
+            self.point_marker(self.refs['source'],(.95,.55,.1));self.point_marker(self.refs['target'],(.15,.7,.3))
             if not self.copy.isChecked():
                 self.hidden.append((moving,bool(moving.Visibility)));moving.Visibility=False
             if not self.copy.isChecked() and not transforms.changed(pose):
                 raise ValueError(tr('すでに指定した位置・向きに配置されています。'))
             self.valid=True;self.accept_button.setEnabled(True);self.status.setStyleSheet('color:#245b73;')
+            if self.geometry_kind=='vertex':
+                self.status.setText(tr('移動量 X: %.6f / Y: %.6f / Z: %.6f mm\n向きを維持 / %sのプレビュー',
+                                       'Translation X: %.6f / Y: %.6f / Z: %.6f mm\nKeep orientation / %s preview')%
+                                    (*tuple(pose.Base),tr('コピーして位置合わせ') if self.copy.isChecked() else tr('位置合わせ')))
+                return
             self.status.setText((tr('軸方向オフセット %g mm / 回転 %g°\n%sのプレビュー',
                                     'Axial offset %g mm / Rotation %g°\n%s preview') if self.geometry_kind=='cylinder' else
                                  tr('すき間 %g mm / 面内回転 %g°\n%sのプレビュー'))%(self.gap.value(),self.angle.value(),tr('コピーして位置合わせ') if self.copy.isChecked() else tr('位置合わせ')))

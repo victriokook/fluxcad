@@ -9,23 +9,19 @@ def is_mesh(obj):
     return bool(obj and obj.isDerivedFrom('Mesh::Feature') and not getattr(obj,'FluxCADInternal',False))
 
 
-def targets(doc,objects):
+def targets(doc, objects):
     if not objects:
-        raise ValueError(tr('メッシュを選択してください。複数選択はCtrl＋クリックです。',
-                            'Select a mesh. Ctrl-click to select multiple meshes.'))
-    result=[]
+        raise ValueError(tr('メッシュを選択してください。複数選択はCtrl＋クリックです。', 'Select a mesh. Ctrl-click to select multiple meshes.'))
+    result = []
     for obj in objects:
-        if obj.Document!=doc or not is_mesh(obj) or not obj.Mesh.CountFacets:
-            raise ValueError(tr('同じ文書のメッシュだけを選択してください。','Select only meshes from the same document.'))
-        # Generated meshes must retain their source relationship; edit a plain
-        # imported Mesh::Feature rather than silently overriding a generator.
-        if obj.TypeId!='Mesh::Feature':
-            raise ValueError(tr('生成されたメッシュは対象外です。STLとして読み込んだメッシュを選択してください。',
-                                'Select an imported mesh; generated meshes are not supported.'))
-        if any(path=='Placement' or path.startswith('Placement.') or path=='Mesh' for path,value in obj.ExpressionEngine):
-            raise ValueError(tr('配置や形状が式で制御されているメッシュは変更できません。',
-                                'This mesh has an expression-controlled placement or geometry.'))
-        if obj not in result:result.append(obj)
+        if obj.Document != doc or not is_mesh(obj) or (not obj.Mesh.CountFacets):
+            raise ValueError(tr('同じ文書のメッシュだけを選択してください。', 'Select only meshes from the same document.'))
+        if obj.TypeId != 'Mesh::Feature':
+            raise ValueError(tr('生成されたメッシュは対象外です。STLとして読み込んだメッシュを選択してください。', 'Select an imported mesh; generated meshes are not supported.'))
+        if any((path.lstrip('.') == 'Placement' or path.lstrip('.').startswith('Placement.') or path.lstrip('.') == 'Mesh' for path, value in obj.ExpressionEngine)):
+            raise ValueError(tr('配置や形状が式で制御されているメッシュは変更できません。', 'This mesh has an expression-controlled placement or geometry.'))
+        if obj not in result:
+            result.append(obj)
     return result
 
 

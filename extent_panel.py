@@ -3,15 +3,16 @@ import FreeCAD as App
 import FreeCADGui as Gui
 import Part
 from PySide import QtCore,QtWidgets as W
-from extrude_panel import ExtrudePanel
+from floating_panel import FloatingPanel
 from i18n import tr
 import model
 import model_extents as extents
 import browser
 
 
-class ExtentPanel(ExtrudePanel):
-    preferred_height=650
+class ExtentPanel(FloatingPanel):
+    layout_key='ExtrudePanel'
+    preferred_height=760
 
     def build_fields(self,form):
         super().build_fields(form)
@@ -72,6 +73,11 @@ class ExtentPanel(ExtrudePanel):
 
     def start(self,sketch=None,regions=None,index=0,existing=None):
         self.cancel();self.existing=existing;self.limit=None;self.face_name='';self.picking_face=False;self.press=None
+        self.remember_dimensions()
+        import parameters
+        parameters.lock_fields(extents.tool(existing) if existing else None,
+            {'Distance':self.distance,'Second':self.second,'TaperAngle':self.taper,'TaperAngleRev':self.taper_second,
+             'StartOffset':self.start_offset,'EndOffset':self.end_offset})
         self.operation.setEnabled(True);self.profile.setEnabled(True)
         self.extent.setCurrentIndex(0)
         self.taper.setValue(0);self.taper_second.setValue(0)
@@ -102,6 +108,7 @@ class ExtentPanel(ExtrudePanel):
         self.taper.setValue(values['taper']);self.taper_second.setValue(values['taper_second'])
         self.start_offset.setValue(values['start_offset'])
         self.end_offset.setValue(values['end_offset'])
+        self.remember_dimensions(values)
         self.ws.region_picker.ticket+=1;self.ws.region_picker.clear()
         self.active=True;self.panel.show();self.update_preview();self.position()
 
@@ -114,7 +121,7 @@ class ExtentPanel(ExtrudePanel):
                       taper=self.taper.value(),
                       taper_second=self.taper_second.value() if self.extent.currentData()=='distance' and self.direction.currentData()=='two' else 0)
         if values['operation']=='new':values['target']=None
-        return values
+        return self.dimension_values(values)
 
     def select_face(self):
         if self.active:self.picking_face=True;self.update_preview()
@@ -251,3 +258,19 @@ class ExtentPanel(ExtrudePanel):
                 if press and press[0]==widget and (event.position()-press[1]).manhattanLength()<W.QApplication.startDragDistance():self.pick_face(widget,event.position())
                 return True
         return super().eventFilter(widget,event)
+
+    def remember_dimensions(self, values=None):
+        self.dimension_exact = dict(values or {})
+        self.dimension_shown = {key: getattr(self, key).value() for key in ('distance', 'second', 'taper', 'taper_second', 'start_offset', 'end_offset')}
+
+    def dimension_values(self, values):
+        exact = getattr(self, 'dimension_exact', {})
+        shown = getattr(self, 'dimension_shown', {})
+        for key in ('distance', 'second', 'taper', 'taper_second', 'start_offset', 'end_offset'):
+            if key == 'end_offset' and values['extent'] != 'face':
+                continue
+            if key == 'taper_second' and not (values['extent'] == 'distance' and values['direction'] == 'two'):
+                continue
+            if key in exact and key in shown and getattr(self, key).value() == shown[key]:
+                values[key] = exact[key]
+        return values

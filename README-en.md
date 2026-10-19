@@ -1,69 +1,25 @@
 # FluxCAD
 
-**A compact Windows workspace for FreeCAD, with a ribbon and modeling workflows inspired by Fusion.**
+A Japanese/English Windows workspace for FreeCAD with compact ribbon and modeling tools.
 
 [日本語](README.md) · [User guide](docs/User-guide-en.md) · [Changelog](CHANGELOG.md)
 
-**0.1.0-alpha** is an initial preview for testing and feedback. FluxCAD is an independent project, not an official product of Autodesk or the FreeCAD project. FreeCAD must be installed separately.
-
-## 59-second demo
-
-[![Watch the FluxCAD demo: from sketch to solid](docs/images/demo-video.jpg)](https://www.youtube.com/watch?v=TVqF2vXXdVI)
-
-**[Watch the demo on YouTube (59 seconds, Japanese captions)](https://www.youtube.com/watch?v=TVqF2vXXdVI)**
-
-See real operations: create a rectangular sketch, select a region, extrude it, add a hole and fillets, then rotate the model with the view cube.
+**0.2.122-alpha — 2026-10-19. A fresh public package of the currently accepted implementation**, replacing the old 0.1 preview as the development baseline. This remains an alpha, not a claim that every feature or workflow is complete.
 
 ## Start
 
-1. Install [FreeCAD](https://www.freecad.org/downloads.php). **Windows with FreeCAD 1.1.3** is the tested environment. Other versions, macOS and Linux are unverified.
-2. Download `FluxCAD-v0.1.0-alpha-windows.zip` from [Releases](https://github.com/victriokook/fluxcad/releases) and extract it to a writable folder. A source checkout can be launched in the same way.
-3. Double-click **`Start-FluxCAD.cmd`**. It finds an installed FreeCAD and starts it with separate settings.
-4. The initial language is Japanese. Select **設定 → 表示言語 / Language → English**, save your work and restart.
-5. Open **`samples/Sample.FCStd`** to try a plate with holes.
+Install FreeCAD separately (tested here on Windows / FreeCAD 1.1.4). Download `FluxCAD-v0.2.122-alpha-windows.zip` from [Releases](https://github.com/victriokook/fluxcad/releases), extract into a new writable directory, then run `Start-FluxCAD.cmd`. Use `Start-FluxCAD.ps1 -FreeCADPath "C:\path\to\FreeCAD\bin\FreeCAD.exe"` to choose a runtime. Open an example working copy from File, or try `samples/Sample.FCStd`. Save work separately.
 
-To select a different FreeCAD installation:
+FreeCAD/Python/OpenCASCADE are not bundled. The source ZIP omits the 149 MB cadmpeg executable; the Windows distribution includes its pinned, locally executed decoder for the experimental native SolidWorks path.
 
-```powershell
-.\Start-FluxCAD.ps1 -FreeCADPath "C:\path\to\FreeCAD\bin\FreeCAD.exe"
-```
+## Implemented scope
 
-FreeCAD supplies Python, OpenCASCADE and Qt. No separate Python installation is required to run FluxCAD. FreeCAD binaries and portable distributions are not bundled.
+Sketch curves/constraints, numeric ellipse tools, snapping and nested/crossing profiles; solid extrusion/revolve/sweep/loft, holes, edge features, shell, booleans, scale and alignment; plastic ribs/bosses/gussets/snap hooks/draft and hollow domes; SheetMetal base/flange/unfold; surfaces, meshes, drawings/exports; parameters/CSV, assemblies, interference, animation/image sequences and example working copies.
 
-## Features
+**SolidWorks import is experimental and incomplete.** Saved display meshes and a constrained native-solid path are implemented, but arbitrary files/configurations, colors and feature history are not certified. Keep source documents unchanged and verify imported results independently. Shipping code does not certify full compatibility.
 
-- Japanese/English ribbon, bodies/sketches/meshes browser and movable panels.
-- Sketches, grid snapping, and selection/extrusion of bounded regions formed by crossing lines, arcs and B-splines.
-- Extrude, revolve, loft, sweep, holes/threads, fillets, chamfers, shells, draft and Boolean operations.
-- Move, rotate, align, mirror, rectangular/circular/path patterns, construction planes and axes.
-- STL selection, movement, scaling, rotation, separation and plane cuts.
-- Basic components/joints, native FreeCAD surface tools and TechDraw drawing/PDF/SVG workflows.
+See [validation scope and limits](docs/releases/0.2.122-alpha.md) and [third-party notices](THIRD_PARTY_NOTICES.md). SheetMetal native dialogs may retain English. Complex sheet metal, all feature combinations and all selection failures are not certified.
 
-See the [user guide](docs/User-guide-en.md) for supported cases and feature limitations.
+This package includes the accepted missing-cell and tiny-area feedback fixes. Unaccepted browser.py/fluxcad.py performance candidates, machine-reconstruction/reference CAD, personal settings and caches are excluded. The 99 application modules are checked against accepted hashes. Native API checks and physical UI evidence are explicitly distinguished.
 
-## Controls
-
-| Action | Input |
-| --- | --- |
-| Pan | Middle-button drag |
-| Orbit | Shift + middle-button drag, or drag the view cube |
-| Zoom | Mouse wheel |
-| Extrude | Finish Sketch → click inside a region → E |
-| Add/remove selection | Ctrl + click |
-| Move selected body | M |
-| Command search | S |
-| Fixed grid | Palette 0.1 / 0.5 / 1 mm presets, or enter a value and press Enter |
-
-## Saving and limitations
-
-Use FCStd to retain editable models. Start FluxCAD before opening documents with FluxCAD-specific linked features. STEP/STL exports do not retain feature history or joints. Region selection is available after finishing sketch edit; topology changes may require reselecting regions.
-
-Advanced assembly constraints, sheet metal, CAM and simulation are not provided. FluxCAD is not fully compatible with Fusion and does not directly import Fusion design files. Settings are stored in the extracted folder's `config/` directory. Extract updates to a separate folder, save documents and close the old version before using the new one. Test important designs on copies.
-
-## Feedback and development
-
-Use **Bug report / 不具合報告** in Issues with versions, steps to reproduce and the expected result. Small non-confidential example files help.
-
-[Validation](docs/VALIDATION.md) · [Contributing](CONTRIBUTING.md) · [Publishing instructions](docs/PUBLISHING.md)
-
-FluxCAD's original code, bundled original icons and samples use the [MIT License](LICENSE). FreeCAD and its dependencies retain their own licenses; see [third-party notices](THIRD_PARTY_NOTICES.md).
+For developers: `python scripts/check_source.py`; isolated FreeCAD smoke tests via `tests/Run-Smoke.ps1`. ZIPs include file manifests and SHA256SUMS.txt. FluxCAD is independent of Autodesk and the FreeCAD project.

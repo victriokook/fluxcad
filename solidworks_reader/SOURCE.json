@@ -1,0 +1,31 @@
+{
+  "repository": "https://github.com/XRTC5/sldprt-export",
+  "commit": "ebde7524b3876c5d78c7e2248f2eba9b5725a6c0",
+  "files": [
+    {
+      "path": "LICENSE",
+      "sha256": "40e843bddfa4c8866bc0b6d5bd509b35e5952aa653414e7c3bc39d97b51ff3a9"
+    },
+    {
+      "path": "src/sldprt/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "src/sldprt/assembly.py",
+      "sha256": "0f62d0b4bbad62bad973d1c4c631f87b0de4b999f24fdbc141ff00421d7b2624"
+    },
+    {
+      "path": "src/sldprt/blocks.py",
+      "sha256": "c18f8ed13ee5f657aa328b93da730d82df71fa39844e46360d2793a75f29f621"
+    },
+    {
+      "path": "src/sldprt/mesh.py",
+      "sha256": "3ab91b16ec088a150ef8197bfc90234a4d47225762e08c8adb1637cda2c30dee"
+    },
+    {
+      "path": "src/sldprt/savedmesh.py",
+      "sha256": "791360048e5ec17d1156450e5c4203b6b110f145ba40ff70808536917caa378f"
+    }
+  ],
+  "usage": "Unmodified MIT dependency; only named-block/strip parsers and rigid transform arithmetic used. CRC/bounded decompression and scene import adapter are FluxCAD code, separately attributed."
+}

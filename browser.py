@@ -7,6 +7,36 @@ import model_mesh
 from PySide import QtCore, QtGui, QtWidgets as W
 
 
+def cancel_fixed_target_previews(ws):
+    for panel in (ws.dimension_scale, ws.face_offset):
+        if panel.active:
+            panel.cancel()
+
+
+def rename_object(ws,obj):
+    doc=App.ActiveDocument
+    if not doc or obj is None or obj.Document!=doc or ws.current_sketch():
+        raise ValueError(tr('編集を終了して名前を変更する対象を選択してください。','Finish editing and select the object to rename.'))
+    name,label=obj.Name,obj.Label
+    text,ok=W.QInputDialog.getText(ws.main,tr('名前を変更','Rename'),tr('表示名','Label'),W.QLineEdit.Normal,label)
+    if not ok:return False
+    if App.ActiveDocument!=doc or doc.getObject(name) is not obj or obj.Label!=label:
+        raise ValueError(tr('対象が変更されました。選び直してください。','The target changed. Select it again.'))
+    text=text.strip()
+    if not text:raise ValueError(tr('名前を入力してください。','Enter a name.'))
+    if text==label:return False
+    import model
+    with model.transaction(doc,tr('名前を変更','Rename')):
+        obj.Label=text
+    ws.refresh()
+    return True
+
+def rename_selected(ws,tree):
+    items=tree.selectedItems()
+    if len(items)!=1:raise ValueError(tr('名前を変更する対象を1つ選択してください。','Select one object to rename.'))
+    return rename_object(ws,ws.browser.object(items[0]))
+
+
 def body_owner(obj):
     if obj.isDerivedFrom('PartDesign::Feature'):
         parent = obj.getParentGeoFeatureGroup()
@@ -28,6 +58,9 @@ def solid_candidate(obj):
         return False
     if obj.TypeId=='Part::Offset' and getattr(obj,'FluxSurfaceOffset',False):return bool(obj.Fill)
     if obj.TypeId=='Part::Refine':return bool(obj.Source and obj.Source.Shape.Solids)
+    if getattr(obj,'FluxDimensionScale',False):return True
+    if getattr(obj,'FluxPlastic',''):return True
+    if getattr(obj,'FluxFaceOffset',False):return True
     if getattr(obj,'FluxPrimitive',''):return True
     if getattr(obj,'FluxPathPattern',False):return True
     # Keep broken/empty final operations accessible instead of replacing them
@@ -53,6 +86,7 @@ def geometry_kind(obj):
         obj.TypeId=='Sketcher::SketchObject' or obj.TypeId.endswith('ShapeBinder') or solid_candidate(obj)):
         return None
     import native_tools
+    if obj.TypeId=='Surface::FeatureBlendCurve':return 'curve'
     if obj.Shape.Faces or native_tools.can_edit_surface(obj) or (obj.TypeId=='Part::Refine' and obj.Source and obj.Source.Shape.Faces):
         return 'surface'
     if obj.Shape.Edges or obj.Shape.Vertexes:return 'curve'
@@ -122,6 +156,22 @@ def collect(doc):
 
 class BrowserTree(W.QTreeWidget):
     visibilityClicked = QtCore.Signal(object)
+    deleteRequested = QtCore.Signal()
+
+    def event(self,event):
+        if (event.type()==QtCore.QEvent.ShortcutOverride and event.key()==QtCore.Qt.Key_Delete
+                and event.modifiers()==QtCore.Qt.NoModifier):
+            event.accept()  # Prevent FreeCAD's hidden tree action from taking this key.
+            return True
+        return super().event(event)
+
+    def keyPressEvent(self,event):
+        if event.key()==QtCore.Qt.Key_Delete and event.modifiers()==QtCore.Qt.NoModifier:
+            if not event.isAutoRepeat():
+                self.deleteRequested.emit()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
     def mousePressEvent(self,event):
         item = self.itemAt(event.pos())
@@ -186,11 +236,13 @@ QTreeWidget::item:selected {background:#d1eee8;color:#12584d;}
         self.tree.itemSelectionChanged.connect(self.select)
         self.tree.itemDoubleClicked.connect(self.activate)
         self.tree.visibilityClicked.connect(self.toggle_visibility)
+        self.tree.deleteRequested.connect(self.request_delete)
+        self.tree.setToolTip(tr('F2で表示名を変更できます。','Press F2 to rename the selected object.'))
         self.tree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(self.context_menu)
         shortcut_class = getattr(W,'QShortcut',None) or QtGui.QShortcut
         self.shortcuts = []
-        for key,callback in [('M',ws.start_move),('E',ws.extrude)]:
+        for key,callback in [('M',ws.start_move),('E',ws.extrude),('F2',lambda:rename_selected(ws,self.tree))]:
             shortcut = shortcut_class(QtGui.QKeySequence(key),self.tree)
             shortcut.setContext(QtCore.Qt.WidgetWithChildrenShortcut)
             shortcut.activated.connect(lambda cb=callback: ws.safe(cb))
@@ -386,6 +438,7 @@ QTreeWidget::item:selected {background:#d1eee8;color:#12584d;}
                         else tr('ダブルクリックで分割位置を編集。Mで移動。','Double-click to edit the split. M to move.') if getattr(obj,'FluxSplitPart',False)
                         else tr('ダブルクリックでミラーの基準面を編集。Mで移動。','Double-click to edit the mirror plane. M to move.') if getattr(obj,'FluxMirror',False)
                         else tr('ダブルクリックで操作と工具を編集。Mで移動。','Double-click to edit the operation and tools. M to move.') if getattr(obj,'FluxCombine',False)
+                        else tr('ダブルクリックでmm単位の増減量を編集。','Double-click to edit signed dimension changes in mm.') if getattr(obj,'FluxDimensionScale',False)
                         else tr('ダブルクリックで穴を編集。Mで移動。','Double-click to edit the hole. M to move.') if getattr(obj,'FluxHole',False)
                         else tr('ダブルクリックで寸法と位置を編集。Mで移動。','Double-click to edit dimensions and position. M to move.') if getattr(obj,'FluxPrimitive','')
                         else tr('ダブルクリックで経路・個数・間隔・向きを編集。Mで移動。','Double-click to edit path, quantity, distance and orientation. M to move.') if getattr(obj,'FluxPathPattern',False)
@@ -410,7 +463,7 @@ QTreeWidget::item:selected {background:#d1eee8;color:#12584d;}
                                          'Surface or section curve. Select edges for surface creation or measurement. Right-click for visibility, appearance and export.'))
                     import native_tools
                     if native_tools.can_edit_surface(obj):
-                        item.setToolTip(0,item.toolTip(0)+tr('\nダブルクリックでサーフェスの設定を再編集。','\nDouble-click to edit surface settings.'))
+                        item.setToolTip(0,item.toolTip(0)+(tr('\nダブルクリックで接続位置・連続性・接線を編集。','\nDouble-click to edit connection positions, continuity and tangents.') if obj.TypeId=='Surface::FeatureBlendCurve' else tr('\nダブルクリックでサーフェスの設定を再編集。','\nDouble-click to edit surface settings.')))
                 if getattr(obj,'FluxComponent',False):
                     item.setToolTip(0,tr('ダブルクリックで名前・接地を編集。元形状：','Double-click to edit name/grounding. Source: ')+getattr(obj.Source,'Label','?'))
                 if getattr(obj,'FluxJoint',False):
@@ -429,6 +482,7 @@ QTreeWidget::item:selected {background:#d1eee8;color:#12584d;}
         self.position()
 
     def select(self):
+        cancel_fixed_target_previews(self.ws)
         for panel in (self.ws.component_panel,self.ws.joint_panel,self.ws.primitive_panel,self.ws.path_pattern_panel,self.ws.construction_panel,self.ws.construction_axis_panel):
             if panel is self.ws.construction_panel and panel.active and panel.kind=='along_path' and panel.picking=='reference_a':continue
             if panel.active:panel.cancel()
@@ -494,6 +548,10 @@ QTreeWidget::item:selected {background:#d1eee8;color:#12584d;}
             if obj.TypeId.startswith('Measure::'):
                 import native_tools
                 self.ws.safe(lambda:native_tools.measurement_details(self.ws,obj));return
+            if getattr(obj,'FluxFaceOffset',False):
+                self.ws.safe(lambda:self.ws.face_offset.start(existing=obj));return
+            if getattr(obj,'FluxPlastic',''):
+                self.ws.safe(lambda:self.ws.plastic.start(existing=obj));return
             if obj.TypeId=='Part::Scale':
                 import native_tools
                 self.ws.safe(lambda:native_tools.edit_scale(self.ws,obj));return
@@ -546,6 +604,47 @@ QTreeWidget::item:selected {background:#d1eee8;color:#12584d;}
             self.ws.edit_sketch()
         self.ws.safe(edit)
 
+    def request_delete(self,item=None):
+        if self.ws.current_sketch() or (Gui.activeDocument() and Gui.activeDocument().getInEdit()):
+            self.ws.main.statusBar().showMessage(tr('先にスケッチ編集を終了してください。',
+                                                    'Finish sketch editing before deleting bodies.'),6000)
+            return
+        selected = [item] if item and not item.isSelected() else self.tree.selectedItems()
+        names = [entry.data(0,QtCore.Qt.UserRole) for entry in selected]
+        if not names:return
+        doc = App.ActiveDocument
+        self.ws.safe(lambda:self.delete_bodies(doc,names))
+
+    def delete_bodies(self,doc,names):
+        import body_delete
+        ordered = body_delete.plan(doc,names)
+        expected=tuple((name,doc.getObject(name)) for name in ordered)
+        labels = [doc.getObject(name).Label for name in names]
+        message = tr('選択したボディを削除しますか？\n','Delete the selected bodies?\n')+'\n'.join(labels)
+        message += tr('\n\nこのボディだけで使用する加工履歴も削除します。\n元のスケッチは残ります。Ctrl＋Zで元に戻せます。',
+                      '\n\nExclusive body history will also be deleted.\nSource sketches are kept. Undo with Ctrl+Z.')
+        contained = [doc.getObject(name).Label for name in ordered
+                     if doc.getObject(name).TypeId=='Sketcher::SketchObject']
+        if contained:
+            message += tr('\n\nただし、FreeCAD標準Body内の次のスケッチは一緒に削除します：\n',
+                          '\n\nThese sketches inside native FreeCAD Bodies will also be deleted:\n')+'\n'.join(contained)
+        dialog = W.QMessageBox(W.QMessageBox.Question,tr('ボディを削除','Delete Bodies'),message,
+                              W.QMessageBox.NoButton,self.ws.main)
+        dialog.setObjectName('FluxDeleteBodies')
+        remove = dialog.addButton(tr('削除','Delete'),W.QMessageBox.AcceptRole)
+        dialog.addButton(W.QMessageBox.Cancel)
+        dialog.setDefaultButton(W.QMessageBox.Cancel)
+        dialog.exec_()
+        if dialog.clickedButton()!=remove:return
+        if App.ActiveDocument!=doc:return
+        # Recheck dependencies after the modal dialog, then delete atomically.
+        body_delete.check_context(doc,names,expected)
+        body_delete.remove(doc,names)
+        Gui.Selection.clearSelection()
+        self.ws.region_picker.clear()
+        self.ws.main.statusBar().showMessage(tr('ボディを削除しました。Ctrl＋Zで元に戻せます。',
+                                                'Bodies deleted. Press Ctrl+Z to undo.'),6000)
+
     def context_menu(self,point):
         item = self.tree.itemAt(point)
         obj = self.object(item)
@@ -576,7 +675,7 @@ QTreeWidget::item:selected {background:#d1eee8;color:#12584d;}
             return
         if geometry_kind(obj):
             import native_tools
-            edit=menu.addAction(tr('サーフェスを編集','Edit Surface')) if native_tools.can_edit_surface(obj) else None
+            edit=menu.addAction(tr('曲線を編集','Edit Curve') if obj.TypeId=='Surface::FeatureBlendCurve' else tr('サーフェスを編集','Edit Surface')) if native_tools.can_edit_surface(obj) else None
             appearance=menu.addAction(tr('外観','Appearance'))
             measure=menu.addAction(tr('計測','Measure'))
             export=menu.addAction(tr('エクスポート…','Export…'))
@@ -593,6 +692,8 @@ QTreeWidget::item:selected {background:#d1eee8;color:#12584d;}
         if joint:visibility.setEnabled(False)
         plane=getattr(obj,'FluxPlane',False);axis=getattr(obj,'FluxConstructionAxis','')
         create=menu.addAction(tr('スケッチを作成')) if plane else None
+        validate = menu.addAction(tr('スケッチを検証・修復…','Validate / Repair Sketch…')) if obj.TypeId=='Sketcher::SketchObject' else None
+        if validate is not None:validate.setObjectName('FluxValidateSketchAction')
         edit = menu.addAction(tr('ジョイントを編集','Edit Joint') if joint else tr('コンポーネントを編集','Edit Component') if component else tr('軸を編集','Edit Axis') if axis else tr('平面を編集') if plane else tr('スケッチを編集') if obj.TypeId=='Sketcher::SketchObject' else tr('移動…'))
         duplicate=menu.addAction(tr('コンポーネントを複製','Duplicate Component')) if component else None
         ground=menu.addAction(tr('接地を解除','Unground') if obj.Grounded else tr('接地','Ground')) if component else None
@@ -610,8 +711,21 @@ QTreeWidget::item:selected {background:#d1eee8;color:#12584d;}
         split_edit=menu.addAction(tr('分割位置を編集…','Edit Split…')) if getattr(obj,'FluxSplitPart',False) else None
         combine_edit=menu.addAction(tr('操作と工具を編集…','Edit Operation and Tools…')) if getattr(obj,'FluxCombine',False) else None
         mirror_edit=menu.addAction(tr('ミラーの基準面を編集…','Edit Mirror Plane…')) if getattr(obj,'FluxMirror',False) else None
+        remove = None
+        if obj.Name in {body.Name for body,_ in collect(App.ActiveDocument)[0]} and not component:
+            menu.addSeparator()
+            remove = menu.addAction(tr('削除','Delete')+'\tDel')
+            remove.setObjectName('FluxDeleteBodyAction')
+        rename=menu.addAction(tr('名前を変更…','Rename…'));rename.setObjectName('FluxRenameObjectAction')
         chosen = menu.exec_(self.tree.viewport().mapToGlobal(point))
         if chosen is None:return
+        if chosen==rename:self.ws.safe(lambda:rename_object(self.ws,obj));return
+        if remove is not None and chosen==remove:
+            self.request_delete(item)
+            return
+        if validate is not None and chosen==validate:
+            self.ws.safe(lambda:self.ws.validate_sketch(obj))
+            return
         if chosen in [a for a in (duplicate,ground,release) if a is not None]:
             def manage():
                 Gui.Selection.clearSelection();Gui.Selection.addSelection(obj)
@@ -664,3 +778,4 @@ QTreeWidget::item:selected {background:#d1eee8;color:#12584d;}
         for dock in self.native_docks:
             try: dock.show()
             except RuntimeError: pass
+

@@ -35,7 +35,7 @@ def build(ws):
     ws.ribbon = root
     ws.ribbon_actions = {}
     ws.ribbon_menus = {}
-    ws.solid_action_keys = ['extrude','revolve','loft','sweep','box','cylinder','hole','fillet','chamfer','shell','move','move_numeric','move_copy','align','join','cut','split_body','linear_pattern','circular_pattern','mirror','offset_plane','rectangle','mesh_scale','mesh_rotate']
+    ws.solid_action_keys = ['extrude','revolve','loft','sweep','box','cylinder','hole','fillet','chamfer','shell','move','move_numeric','move_copy','align','join','cut','split_body','linear_pattern','circular_pattern','mirror','offset_plane','rectangle','mesh_scale','mesh_rotate','mesh_translate']
 
     def action(key, text, icon, callback, shortcut=None):
         path = os.path.join(os.path.dirname(__file__),'icons',icon+'.svg')
@@ -52,10 +52,24 @@ def build(ws):
 
     action('new',tr('新規デザイン'),'document-new',command('Std_New'))
     action('open',tr('開く…'),'document-open',command('Std_Open'))
+    import solidworks_import
+    solidworks_import.register()
+    action('solidworks_open',tr('SolidWorksを読み込み…','Import SolidWorks…'),'document-open',lambda:solidworks_import.show(ws))
+    import solidworks_brep
+    action('solidworks_brep_open',tr('SolidWorks厳密ソリッドを読み込み…','Import SolidWorks Native Solids…'),'document-open',lambda:solidworks_brep.show(ws))
     action('save',tr('保存'),'document-save',command('Std_Save'))
+    add_save_as(action, command)
+    import example_tools
+    action('examples',tr('使用例を作業コピーで開く…','Open Example Working Copy…'),'document-open',lambda:example_tools.show(ws))
+    import example_guide
+    action('example_guide',tr('使用例のガイド…','Example Guide…'),'document-open',lambda:example_guide.show(ws))
     action('undo',tr('元に戻す'),'edit-undo',command('Std_Undo'))
     action('redo',tr('やり直す'),'edit-redo',command('Std_Redo'))
-    import drawing, drawing_detail
+    import drawing, drawing_detail, parameter_panel
+    action('parameters',tr('パラメータを変更','Change Parameters'),'parameters',lambda:parameter_panel.show(ws))
+    import alternating_polygon
+    action('alternating_polygon',tr('2種類の辺の多角形…','Alternating Side Polygon…'),'polygon',lambda:alternating_polygon.show(ws))
+    ws.solid_action_keys.append('alternating_polygon')
     for key,ja,en,icon,callback in [
         ('drawing_new','新規図面','New Drawing','drawing-page',lambda:drawing.new_page(ws)),
         ('drawing_open','図面を開く','Open Drawing','drawing-page',lambda:drawing.open_page(ws)),
@@ -86,6 +100,10 @@ def build(ws):
         a=action('drawing_'+key,tr(ja,en),icon,lambda k=key:drawing_detail.start(ws,k))
         a.setToolTip(tr(tipja,tipen));ws.solid_action_keys.append('drawing_'+key)
     action('sketch',tr('スケッチを作成'),'Sketcher_NewSketch',ws.sketch)
+    ws.ribbon_actions['sketch'].setToolTip(tr('選択した平面上に作成。面を選択していない場合は、表示グリッドの面に作成します。',
+                                             'Create on the selected planar face, or on the displayed grid if no face is selected.'))
+    action('sketch_plane',tr('平面を指定してスケッチ…','Sketch on Chosen Plane…'),'Sketcher_NewSketch',lambda:ws.sketch(choose_plane=True))
+    ws.solid_action_keys.append('sketch_plane')
     action('rectangle',tr('長方形スケッチ'),'Sketcher_CreateRectangle',ws.rectangle)
     action('extrude',tr('押し出し'),'extrude',ws.extrude,'E')
     action('revolve',tr('回転'),'revolve',ws.revolve)
@@ -101,11 +119,15 @@ def build(ws):
     for key,label,en in [('sphere','球','Sphere'),('torus','トーラス','Torus'),('coil','コイル','Coil'),('pipe','パイプ','Pipe')]:
         action(key,tr(label,en),key,lambda kind=key:ws.primitive_panel.start(kind))
         ws.solid_action_keys.append(key)
+    action('dome',tr('ドーム…','Dome…'),'sphere',lambda:ws.primitive_panel.start('dome'))
+    ws.solid_action_keys.append('dome')
     action('hole',tr('穴'),'hole',ws.hole,'H')
     action('fillet',tr('フィレット'),'Part_Fillet',ws.fillet,'F')
     action('chamfer',tr('面取り'),'chamfer',ws.chamfer)
     action('split_body',tr('ボディを分割','Split Body'),'split-body',ws.split_body)
     action('shell',tr('シェル（中空化）'),'shell',ws.shell)
+    action('face_offset',tr('面をオフセット…','Offset Face…'),'shell',lambda:ws.face_offset.start())
+    ws.solid_action_keys.append('face_offset')
     action('offset_plane',tr('オフセット平面'),'offset-plane',ws.offset_plane)
     action('midplane',tr('中間平面','Midplane'),'midplane',lambda:ws.construction_panel.start('midplane'))
     action('angled_plane',tr('角度付き平面','Plane at Angle'),'angled-plane',lambda:ws.construction_panel.start('angle'))
@@ -121,10 +143,13 @@ def build(ws):
     action('move_copy',tr('移動 / コピー（回転）…'),'body-rotate',ws.move_copy)
     action('mesh_scale',tr('メッシュのサイズ変更…','Resize Mesh…'),'mesh-scale',lambda:ws.edit_mesh('scale'))
     action('mesh_rotate',tr('メッシュの回転…','Rotate Mesh…'),'body-rotate',lambda:ws.edit_mesh('rotate'))
+    action('mesh_translate',tr('メッシュの移動…','Move Mesh…'),'move',lambda:ws.edit_mesh('translate'))
     action('mesh_separate',tr('部品を分離…','Separate Parts…'),'mesh-separate',lambda:ws.edit_mesh('separate'))
     action('mesh_cut',tr('平面で切断…','Plane Cut…'),'mesh-cut',lambda:ws.edit_mesh('cut'))
     ws.solid_action_keys.extend(['mesh_separate','mesh_cut'])
     action('align',tr('位置合わせ…'),'align',ws.align)
+    ws.ribbon_actions['align'].setToolTip(tr('頂点どうし、平面どうし、円筒の軸どうしを位置合わせします。',
+                                           'Align two vertices, two planar faces or two cylinder axes.'))
     action('join',tr('結合'),'Part_Fuse',lambda: ws.boolean(False))
     action('cut',tr('切り取り'),'Part_Cut',lambda: ws.boolean(True))
     action('intersect',tr('交差部分を残す','Intersect'),'Part_Common',lambda:ws.boolean('intersect'))
@@ -137,13 +162,20 @@ def build(ws):
     action('slider_joint',tr('スライダージョイント…','Slider Joint…'),'slider-joint',lambda:ws.start_joint('slider'))
     action('release_joint',tr('ジョイントを解除','Release Joint'),'rigid-joint',ws.release_joint)
     ws.solid_action_keys.extend(['component','duplicate_component','ground_component','rigid_joint','revolute_joint','slider_joint','release_joint'])
-    action('export',tr('エクスポート…'),'document-export',ws.export)
+    action('export',tr('エクスポート…'),'document-export',ws.export).setToolTip(
+        tr('表示中の形状をすべて書き出します。対象外にする形状は非表示にしてください。',
+           'Export all visible geometry. Hide objects you want to exclude.'))
     action('insert',tr('挿入…'),'insert',command('Std_Import'))
+    action('insert_native',tr('FluxCAD部品を挿入…','Insert FluxCAD Part…'),'insert',lambda:insert_native_document(ws))
     action('search',tr('コマンドを検索'),'search',ws.command_search,'S')
     action('select',tr('選択'),'select',ws.select_mode)
     action('box_select',tr('窓選択'),'select',command('Std_BoxSelection'))
     action('select_all',tr('すべて選択'),'select',command('Std_SelectAll'))
+    action('visible_solids',tr('表示中のソリッドを選択','Select Visible Solids'),'select',lambda:select_visible(ws,'solid'))
+    action('visible_meshes',tr('表示中のメッシュを選択','Select Visible Meshes'),'select',lambda:select_visible(ws,'mesh'))
+    action('invert_visible',tr('表示中の選択を反転','Invert Visible Selection'),'select',lambda:invert_visible(ws)).setToolTip(tr('表示中のソリッドとメッシュだけで選択を反転します。','Invert selection among visible solids and meshes only.'))
     action('fit',tr('全体表示'),'zoom-fit-best',ws.fit)
+    action('fit_selection',tr('選択物を拡大表示','Fit Selection'),'zoom-fit-best',lambda:fit_selection(ws)).setToolTip(tr('選択した形状に表示を合わせます。向き・形状・配置は保持します。','Fit the view to selected geometry, preserving orientation, geometry and placement.'))
     tabs_action = action('bottom_tabs',tr('下段タブを表示'),'eye',ws.toggle_bottom_tabs)
     tabs_action.setCheckable(True)
     tabs_action.setChecked(ws.bottom_tabs_visible)
@@ -204,6 +236,15 @@ def build(ws):
     for key,title,icon,cmd in sketch_commands:
         action(key,title,icon,lambda c=cmd: ws.sketch_command(c))
         ws.sketch_action_keys.append(key)
+    import ellipse_dimensions
+    action('ellipse_dimensions',tr('楕円：横幅・縦高さ…','Ellipse: Width / Height…'),'ellipse',lambda:ellipse_dimensions.show(ws))
+    ws.sketch_action_keys.append('ellipse_dimensions')
+    import ellipse_resize_ui
+    action('ellipse_resize',tr('楕円の横幅・縦高さを変更…','Resize Ellipse…'),'ellipse',lambda:ellipse_resize_ui.show(ws))
+    ws.sketch_action_keys.append('ellipse_resize')
+    import ellipse_center_ui
+    action('ellipse_center',tr('楕円の中心位置を変更…','Move Ellipse Center…'),'ellipse',lambda:ellipse_center_ui.show(ws))
+    ws.sketch_action_keys.append('ellipse_center')
     for key, tip in {
         'project': tr('別のスケッチやボディの辺・頂点を編集中の平面へ投影します。元の形状の変更に追従します。',
                       'Project edges or vertices from another sketch or body onto the sketch plane. References follow source changes.'),
@@ -230,25 +271,46 @@ def build(ws):
     }.items():
         ws.ribbon_actions[key].setToolTip(tip)
     action('edit_sketch',tr('スケッチを編集'),'Sketcher_NewSketch',ws.edit_sketch)
+    action('validate_sketch',tr('スケッチを検証・修復…','Validate / Repair Sketch…'),
+           'check-geometry',ws.validate_sketch).setToolTip(tr(
+               '端点の一致不足や不正な拘束をFreeCAD標準ツールで検査します。編集中なら編集を終了して開きます。修正は検査後に実行します。',
+               'Inspect missing coincidences and invalid constraints with FreeCAD. Ends sketch editing when necessary. Repairs run only when requested in the inspector.'))
     action('select_sketch',tr('選択（作図を終了）'),'select',ws.select_sketch_geometry)
     ws.sketch_action_keys.append('select_sketch')
     action('finish_sketch',tr('スケッチを終了'),'finish',ws.finish_sketch)
     ws.sketch_action_keys.append('finish_sketch')
 
     def measure():
-        import model_mesh
-        selected=Gui.Selection.getSelection()
-        if len(selected)==1 and model_mesh.is_mesh(selected[0]):
-            obj=selected[0];mesh=model_mesh.world_mesh(obj);b=mesh.BoundBox
-            W.QMessageBox.information(ws.main,tr('検査 — ')+obj.Label,
-                tr('外形寸法 X / Y / Z\n%.3f / %.3f / %.3f mm\n\n三角形数：%d',
-                   'Bounding size X / Y / Z\n%.3f / %.3f / %.3f mm\n\nTriangles: %d')%(b.XLength,b.YLength,b.ZLength,mesh.CountFacets))
+        import model_mesh, model
+        selected = Gui.Selection.getSelection()
+        if len(selected) > 1:
+            if any((obj.Document != App.ActiveDocument or model_mesh.is_mesh(obj) or (not hasattr(obj, 'Shape')) or getattr(obj, 'FluxCADInternal', False) for obj in selected)):
+                raise ValueError(tr('同じ文書のソリッドボディだけを選択してください。', 'Select only solid bodies in the active document.'))
+            shapes = [model.world_shape(obj) for obj in selected]
+            if any((shape.isNull() or not shape.isValid() or (not shape.Solids) for shape in shapes)):
+                raise ValueError(tr('有効なソリッドボディだけを選択してください。', 'Select only valid solid bodies.'))
+            bounds = App.BoundBox()
+            for shape in shapes:
+                bounds.add(shape.BoundBox)
+            text = tr('選択ボディ：%d\n全体外形 X / Y / Z\n%.3f / %.3f / %.3f mm\n\n体積合計  %.3f mm³\n表面積合計  %.3f mm²\n\n重なり部分は各ボディ分を合計します。', 'Selected bodies: %d\nCombined bounds X / Y / Z\n%.3f / %.3f / %.3f mm\n\nSum of volumes  %.3f mm³\nSum of areas  %.3f mm²\n\nOverlaps are counted separately for each body.') % (len(shapes), bounds.XLength, bounds.YLength, bounds.ZLength, sum((shape.Volume for shape in shapes)), sum((shape.Area for shape in shapes)))
+            if len(shapes) == 2:
+                import math
+                distance = float(shapes[0].distToShape(shapes[1])[0])
+                if not math.isfinite(distance) or distance < 0:
+                    raise ValueError(tr('最短距離を計算できません。', 'Cannot calculate the minimum distance.'))
+                text += tr('\n\n最短距離  %.6f mm\n接触・干渉の区別は「干渉チェック」で確認してください。', '\n\nMinimum distance  %.6f mm\nUse Interference to distinguish contact and overlap.') % distance
+            W.QMessageBox.information(ws.main, tr('複数ボディを計測', 'Measure Multiple Bodies'), text)
+            return
+        if len(selected) == 1 and model_mesh.is_mesh(selected[0]):
+            obj = selected[0]
+            mesh = model_mesh.world_mesh(obj)
+            b = mesh.BoundBox
+            W.QMessageBox.information(ws.main, tr('検査 — ') + obj.Label, tr('外形寸法 X / Y / Z\n%.3f / %.3f / %.3f mm\n\n三角形数：%d', 'Bounding size X / Y / Z\n%.3f / %.3f / %.3f mm\n\nTriangles: %d') % (b.XLength, b.YLength, b.ZLength, mesh.CountFacets))
             return
         obj = ws.selection()[0]
-        b = obj.Shape.BoundBox
-        W.QMessageBox.information(ws.main,tr('検査 — ')+obj.Label,
-            tr('外形寸法 X / Y / Z\n%.3f / %.3f / %.3f mm\n\n体積  %.3f mm³\n表面積  %.3f mm²') %
-            (b.XLength,b.YLength,b.ZLength,obj.Shape.Volume,obj.Shape.Area))
+        shape = model.world_shape(obj)
+        b = shape.BoundBox
+        W.QMessageBox.information(ws.main, tr('検査 — ') + obj.Label, tr('外形寸法 X / Y / Z\n%.3f / %.3f / %.3f mm\n\n体積  %.3f mm³\n表面積  %.3f mm²') % (b.XLength, b.YLength, b.ZLength, shape.Volume, shape.Area))
     action('measure',tr('計測（寸法・体積）'),'measure',measure)
     import native_tools
     for key,label,english,icon,tip,tip_en in [
@@ -356,9 +418,11 @@ def build(ws):
     file_button.setText(tr('ファイル'))
     file_menu = W.QMenu(file_button)
     file_menu.setObjectName('FluxFileMenu')
-    for key in ['new','open','save','export']:
+    for key in ['new','open','solidworks_open','solidworks_brep_open','examples','example_guide','save','save_as','export']:
         file_menu.addAction(ws.ribbon_actions[key])
     file_button.setMenu(file_menu)
+    import recent_files
+    recent_files.install(ws, file_menu)
     file_button.setPopupMode(W.QToolButton.InstantPopup)
     row.addWidget(file_button)
     for key in ['save','undo','redo']:
@@ -385,7 +449,7 @@ def build(ws):
         entry.triggered.connect(lambda checked=False,c=code:ws.change_language(c))
     view_menu=W.QMenu(tr('表示'),menu);view_menu.setObjectName('FluxSettingsView');menu.addMenu(view_menu)
     ws.ribbon_menus['設定.表示']=view_menu
-    for key in ['fit','grid','grid_settings','axes','bottom_tabs','top','front','right']:view_menu.addAction(ws.ribbon_actions[key])
+    for key in ['fit','fit_selection','grid','grid_settings','axes','bottom_tabs','top','front','right']:view_menu.addAction(ws.ribbon_actions[key])
     menu.addAction(ws.ribbon_actions['bottom_tabs'])
     native_menu = menu.addAction(tr('FreeCAD メニューバーを表示 / 非表示'))
     native_menu.triggered.connect(lambda: ws.main.menuBar().setVisible(not ws.main.menuBar().isVisible()))
@@ -409,10 +473,7 @@ def build(ws):
     workspace.setFixedSize(94,62)
     workspace_menu=W.QMenu(workspace)
     workspace_menu.setObjectName('FluxWorkspaceMenu')
-    for title in [tr('デザイン'),tr('レンダリング'),tr('アニメーション'),tr('シミュレーション'),tr('製造'),tr('図面')]:
-        option=workspace_menu.addAction(title);option.setEnabled(title in (tr('デザイン'),tr('図面')))
-        if title in (tr('デザイン'),tr('図面')):
-            option.triggered.connect(lambda checked=False,draw=title==tr('図面'):ws.safe(lambda:drawing.switch(ws,draw)))
+    build_workspace_menu(ws,workspace_menu,tr)
     workspace.setMenu(workspace_menu);workspace.setPopupMode(W.QToolButton.InstantPopup)
     body.addWidget(workspace)
     right=W.QVBoxLayout();right.setContentsMargins(0,0,0,0);right.setSpacing(0)
@@ -423,9 +484,6 @@ def build(ws):
     ws.tab_indices={'solid':0,'surface':1,'mesh':2,'sheet':3,'plastic':4,'manage':5,'utilities':6,'sketch':7,'drawing':8}
     for name in [tr('ソリッド'),tr('サーフェス'),tr('メッシュ'),tr('シートメタル'),tr('プラスチック'),tr('管理'),tr('ユーティリティ'),tr('スケッチ'),tr('図面','Drawing')]:
         ws.ribbon_tabs.addTab(name)
-    for index in [3,4,5]:
-        ws.ribbon_tabs.setTabEnabled(index,False)
-        ws.ribbon_tabs.setTabToolTip(index,tr('このワークスペースは未実装です。'))
     ws.ribbon_tabs.setTabVisible(ws.tab_indices['sketch'],False)
     ws.ribbon_tabs.setTabVisible(ws.tab_indices['drawing'],False)
     ws.ribbon_tabs.setSizePolicy(W.QSizePolicy.Expanding,W.QSizePolicy.Fixed)
@@ -480,41 +538,57 @@ def build(ws):
             row.addWidget(frame)
         row.addStretch()
         ws.ribbon_stack.addWidget(page)
+    action('scale_dimensions',tr('寸法で拡大・縮小…','Resize by Dimensions…'),'mesh-scale',lambda:ws.dimension_scale.start()).setToolTip(tr('現在寸法を確認し、X・Y・Zの増減量をmmで指定します。','Show current dimensions and enter signed X/Y/Z changes in mm.'))
+    action('interference',tr('干渉チェック…','Interference…'),'interference',lambda:ws.interference.start()).setToolTip(tr('ボディ同士の重なりを赤く表示し、干渉体積を確認します。','Inspect overlapping bodies and show shared volume in red.'))
+    ws.solid_action_keys.append('interference')
+    import sheetmetal_bridge
+    for kind,ja,en in [('rib', '補強リブ…', 'Reinforcing Rib…'), ('gusset', '三角リブ…', 'Triangular Rib…'), ('boss', '取付ボス…', 'Mounting Boss…'), ('snap', 'スナップフィット爪…', 'Snap-fit Hook…')]:
+        action('plastic_'+kind,tr(ja,en),'plastic-'+kind,lambda k=kind:ws.plastic.start(k))
+        ws.solid_action_keys.append('plastic_'+kind)
+    for key,ja,en,icon in [
+        ('sheet_base','ベース板を作成…','Create Base Plate…','sheet-base'),
+        ('sheet_flange','曲げ・フランジ…','Bend / Flange…','sheet-flange'),
+        ('sheet_unfold','展開…','Unfold…','sheet-unfold')]:
+        action(key,tr(ja,en),icon,lambda k=key:sheetmetal_bridge.start(ws,k))
+        ws.solid_action_keys.append(key)
+    ws.ribbon_actions['sheet_base'].setToolTip(tr('閉じた平面スケッチを選び、板厚を指定します。','Select a closed planar sketch and specify sheet thickness.'))
+    ws.ribbon_actions['sheet_flange'].setToolTip(tr('曲げる直線の辺を1つ選び、曲げ半径・角度・長さを指定します。','Select one straight edge and set radius, angle and flange length.'))
+    ws.ribbon_actions['sheet_unfold'].setToolTip(tr('固定する広い平面を1つ選び、K係数を指定して展開します。','Select one broad stationary planar face and set the K-factor to unfold.'))
     page(tr('ソリッド'),[
-        (tr('スケッチ'),['sketch','rectangle'],['sketch']),
-        (tr('作成'),['sketch',None,'extrude','revolve','sweep','loft','hole',None,'box','cylinder','sphere','torus','coil','pipe',None,(tr('パターン'),['linear_pattern','circular_pattern','path_pattern']),'mirror'],['extrude','revolve','sweep','loft']),
-        (tr('修正'),['fillet','chamfer','shell',None,'join','cut','intersect','split_body','refine_shape',None,'move_copy','align','move','move_numeric','solid_scale',None,'appearance'],['fillet','chamfer','shell','join','move_copy']),
+        (tr('スケッチ'),['sketch','sketch_plane','rectangle','alternating_polygon',None,'edit_sketch','validate_sketch'],['sketch']),
+        (tr('作成'),['sketch',None,'extrude','revolve','sweep','loft','hole',None,'box','cylinder','sphere','dome','torus','coil','pipe',None,(tr('パターン'),['linear_pattern','circular_pattern','path_pattern']),'mirror'],['extrude','revolve','sweep','loft']),
+        (tr('修正'),['fillet','chamfer','shell','face_offset',None,'join','cut','intersect','split_body','refine_shape',None,'move_copy','align','move','move_numeric','solid_scale','scale_dimensions',None,'parameters','appearance'],['fillet','chamfer','shell','join','move_copy']),
         (tr('構築'),['offset_plane','midplane','angled_plane','tangent_plane','three_point_plane','path_plane',None,'center_axis','two_point_axis'],['offset_plane']),
-        (tr('検査'),['native_measure','measure','section_analysis','cross_sections','check_geometry'],['native_measure']),
-        (tr('挿入'),['insert'],['insert']),
+        (tr('検査'),['native_measure','measure','interference','section_analysis','cross_sections','check_geometry'],['native_measure']),
+        (tr('挿入'),['insert','insert_native'],['insert']),
         (tr('アセンブリ','Assemble'),['component','duplicate_component','ground_component',None,'rigid_joint','revolute_joint','slider_joint','release_joint'],['component']),
-        (tr('選択'),['select','box_select','select_all',None,'edit_sketch'],['select'])])
+        (tr('選択'),['select','box_select','select_all','visible_solids','visible_meshes','invert_visible','fit_selection',None,'edit_sketch'],['select'])])
     page(tr('スケッチ'),[
-          (tr('作成'),['line','polyline',(tr('長方形'),['draw_rectangle','center_rectangle','rounded_rectangle']),(tr('円'),['circle','circle3']),(tr('円弧'),['arc3','arc']),(tr('スプライン'),['spline','control_spline']),'polygon','ellipse',(tr('スロット'),['slot','arc_slot']),'point',None,
+          (tr('作成'),['line','polyline',(tr('長方形'),['draw_rectangle','center_rectangle','rounded_rectangle']),(tr('円'),['circle','circle3']),(tr('円弧'),['arc3','arc']),(tr('スプライン'),['spline','control_spline']),'polygon',(tr('楕円'),['ellipse','ellipse_dimensions',None,'ellipse_resize','ellipse_center']),(tr('スロット'),['slot','arc_slot']),'point',None,
                       'sketch_mirror',(tr('パターン'),['sketch_rectangular_pattern','sketch_rotate']),None,
                       (tr('投影 / 含める','Project / Include'),['project','sketch_intersection']),None,'dimension',
                       (tr('寸法の種類','Dimension Types'),['dimension_length','dimension_horizontal','dimension_vertical','dimension_radius','dimension_diameter','dimension_angle',None,'reference_dimension'])],['line','draw_rectangle','spline','polygon','dimension','arc3']),
-          (tr('修正'),['sketch_fillet','sketch_chamfer','trim','extend','sketch_split','sketch_offset',None,'sketch_move','sketch_copy','sketch_rotate','sketch_scale',None,'construction'],['sketch_fillet','trim','sketch_offset']),
+          (tr('修正'),['ellipse_resize','ellipse_center',None,'sketch_fillet','sketch_chamfer','trim','extend','sketch_split','sketch_offset',None,'sketch_move','sketch_copy','sketch_rotate','sketch_scale',None,'construction'],['sketch_fillet','trim','sketch_offset']),
           (tr('拘束'),['horizontal','vertical','coincident','point_on_object','tangent','equal','parallel','perpendicular','fix','symmetric',None,'reference_dimension'],
            ['horizontal','vertical','tangent','equal','parallel','perpendicular','fix','symmetric']),
-          (tr('検査'),['measure'],['measure']),
+          (tr('検査'),['measure','validate_sketch'],['measure']),
           (tr('選択'),['select_sketch'],['select_sketch']),
           (tr('スケッチを終了'),['finish_sketch'],['finish_sketch'])],compact=True)
-    page(tr('ユーティリティ'),[(tr('ナビゲーション'),['fit','top','front','right'],['fit','top','front','right']),
-          (tr('表示設定'),['grid','grid_settings','axes','bottom_tabs','appearance'],['grid','axes']),(tr('検査'),['native_measure','measure','section_analysis','cross_sections','check_geometry'],['native_measure'])])
-    page(tr('メッシュ'),[(tr('挿入'),['insert'],['insert']),
-         (tr('修正'),['move','move_numeric','mesh_rotate','mesh_scale',None,'mesh_separate','mesh_cut',None,'appearance'],['move','mesh_rotate','mesh_scale','mesh_separate','mesh_cut']),
+    page(tr('ユーティリティ'),[(tr('ナビゲーション'),['fit','fit_selection','top','front','right'],['fit','top','front','right']),
+          (tr('表示設定'),['grid','grid_settings','axes','bottom_tabs','appearance'],['grid','axes']),(tr('検査'),['native_measure','measure','interference','section_analysis','cross_sections','check_geometry'],['native_measure'])])
+    page(tr('メッシュ'),[(tr('挿入'),['insert','insert_native'],['insert']),
+         (tr('修正'),['move','move_numeric','mesh_translate','mesh_rotate','mesh_scale',None,'mesh_separate','mesh_cut',None,'appearance'],['move','mesh_rotate','mesh_scale','mesh_separate','mesh_cut']),
          (tr('検査'),['measure'],['measure']),
          (tr('出力','Export'),['export'],['export']),
-         (tr('選択'),['select','box_select','select_all'],['select'])])
+         (tr('選択'),['select','box_select','select_all','visible_solids','visible_meshes','invert_visible','fit_selection'],['select'])])
     page(tr('サーフェス'),[
-        (tr('スケッチ'),['sketch','rectangle'],['sketch']),
+        (tr('スケッチ'),['sketch','sketch_plane','rectangle'],['sketch']),
         (tr('作成'),['surface_extrude','surface_revolve','surface_sweep','surface_loft',None,'surface_patch','surface_boundary','surface_sections'],['surface_extrude','surface_revolve','surface_sweep','surface_loft','surface_patch']),
         (tr('修正'),['surface_offset','surface_thicken','surface_extend','refine_shape',None,'solid_scale','appearance'],['surface_offset','surface_thicken','surface_extend']),
         (tr('構築'),['offset_plane','midplane','angled_plane','tangent_plane','three_point_plane','path_plane'],['offset_plane']),
-        (tr('検査'),['native_measure','measure','section_analysis','cross_sections','check_geometry'],['native_measure','section_analysis']),
-        (tr('挿入'),['insert','export'],['insert']),
-        (tr('選択'),['select','box_select','select_all'],['select'])])
+        (tr('検査'),['native_measure','measure','interference','section_analysis','cross_sections','check_geometry'],['native_measure','section_analysis']),
+        (tr('挿入'),['insert','insert_native','export'],['insert']),
+        (tr('選択'),['select','box_select','select_all','visible_solids','visible_meshes','invert_visible','fit_selection'],['select'])])
     page(tr('図面','Drawing'),[
         (tr('用紙','Sheet'),['drawing_new','drawing_open','drawing_sheet'],['drawing_new']),
         (tr('作成','Create'),['drawing_view','drawing_projection','drawing_section','drawing_detail'],['drawing_view','drawing_projection','drawing_section','drawing_detail']),
@@ -523,8 +597,148 @@ def build(ws):
         (tr('修正','Modify'),['drawing_edit','drawing_display','drawing_frames','drawing_erase'],['drawing_edit']),
         (tr('出力','Export'),['drawing_pdf','drawing_svg'],['drawing_pdf']),
         (tr('デザイン','Design'),['drawing_design'],['drawing_design'])])
-    ws.ribbon_tabs.currentChanged.connect(lambda i: ws.ribbon_stack.setCurrentIndex({0:0,ws.tab_indices['sketch']:1,ws.tab_indices['utilities']:2,ws.tab_indices['mesh']:3,ws.tab_indices['surface']:4,ws.tab_indices['drawing']:5}.get(i,0)))
+    page(tr('シートメタル'),[
+        (tr('スケッチ'),['sketch','rectangle','edit_sketch'],['sketch']),
+        (tr('作成'),['sheet_base','sheet_flange'],['sheet_base','sheet_flange']),
+        (tr('展開','Unfold'),['sheet_unfold'],['sheet_unfold']),
+        (tr('検査'),['native_measure','measure','check_geometry'],['native_measure']),
+        (tr('出力','Export'),['export'],['export'])])
+    page(tr('プラスチック'),[
+        (tr('スケッチ'),['sketch','rectangle','alternating_polygon','edit_sketch'],['sketch']),
+        (tr('作成'),['plastic_rib', 'plastic_gusset', 'plastic_boss', 'plastic_snap', 'extrude'],['plastic_rib', 'plastic_gusset', 'plastic_boss', 'plastic_snap']),
+        (tr('修正'),['shell','fillet','chamfer','face_offset','parameters'],['shell','fillet']),
+        (tr('検査'),['native_measure','measure','interference','check_geometry'],['native_measure','interference']),
+        (tr('出力','Export'),['export'],['export'])])
+    build_manage_page(ws,page,tr)
+    ws.ribbon_tabs.currentChanged.connect(lambda i: select_ribbon_page(ws,i))
     root.setStyleSheet(STYLE)
     root.setSizePolicy(W.QSizePolicy.Ignored,W.QSizePolicy.Fixed)
     ws.toolbar.addWidget(root)
     ws.toolbar.setStyleSheet('QToolBar#FluxCADToolbar {padding:0;margin:0;spacing:0;border:0;border-bottom:1px solid #c9cccf;}')
+
+
+def build_manage_page(ws, page, tr):
+    ws.manage_page_index = ws.ribbon_stack.count()
+    page(tr('管理','Manage'), [
+        (tr('文書','Document'), ['new','open','examples','example_guide','save','save_as'], ['new','open','save']),
+        (tr('パラメータ','Parameters'), ['parameters'], ['parameters']),
+        (tr('部品','Components'), ['component','duplicate_component','ground_component'], ['component','duplicate_component']),
+        (tr('検査','Inspect'), ['check_geometry','interference'], ['check_geometry','interference']),
+        (tr('出力','Export'), ['export'], ['export'])
+    ])
+    ws.ribbon_tabs.setTabEnabled(ws.tab_indices['manage'], True)
+    ws.ribbon_tabs.setTabToolTip(ws.tab_indices['manage'], tr('文書・パラメータ・部品・検査・出力を管理します。','Manage documents, parameters, components, inspection and export.'))
+    return ws.manage_page_index
+
+def select_ribbon_page(ws, index):
+    mapping = {ws.tab_indices['solid']:0, ws.tab_indices['sketch']:1, ws.tab_indices['utilities']:2, ws.tab_indices['mesh']:3, ws.tab_indices['surface']:4, ws.tab_indices['drawing']:5, ws.tab_indices['sheet']:6, ws.tab_indices['plastic']:7, ws.tab_indices['manage']:ws.manage_page_index}
+    ws.ribbon_stack.setCurrentIndex(mapping.get(index,0))
+
+
+def build_workspace_menu(ws, workspace_menu, tr):
+    import drawing
+    options = [(tr('デザイン'), 'design'), (tr('レンダリング', 'Rendering'), 'render'),
+               (tr('アニメーション', 'Animation'), 'animation'), (tr('シミュレーション'), 'simulation'),
+               (tr('製造'), 'manufacture'), (tr('図面'), 'drawing')]
+    for title, key in options:
+        option = workspace_menu.addAction(title)
+        option.setEnabled(key in ('design', 'render', 'animation', 'drawing'))
+        option.setObjectName('FluxWorkspace_' + key)
+        if key == 'render':
+            def open_render():
+                import render_tools
+                render_tools.show(ws)
+            option.triggered.connect(lambda checked=False: ws.safe(open_render))
+        elif key in ('design', 'drawing'):
+            option.triggered.connect(lambda checked=False, draw=key == 'drawing': ws.safe(lambda d=draw: drawing.switch(ws, d)))
+        elif key == 'animation':
+            def open_animation():
+                import animation_tools
+                animation_tools.show(ws)
+            option.triggered.connect(lambda checked=False: ws.safe(open_animation))
+
+
+def add_save_as(action, command):
+    action('save_as', tr('名前を付けて保存…', 'Save As…'), 'document-save-as', command('Std_SaveAs'))
+
+
+def fit_selection(ws):
+    """Frame selected objects with the verified native camera command."""
+    doc = App.ActiveDocument
+    selected = Gui.Selection.getSelection()
+    if not doc or not selected or any(obj.Document != doc for obj in selected):
+        raise ValueError(tr('現在の文書の形状を選択してください。', 'Select geometry in the current document.'))
+    view = Gui.activeDocument().activeView()
+    orientation = view.getCameraOrientation()
+    Gui.runCommand('Std_ViewFitSelection')
+    view.setCameraOrientation(orientation.Q)
+    ws.grid.update()
+
+
+def select_visible(ws, kind):
+    import export_tools
+    import model_mesh
+    if kind not in ('solid', 'mesh'):
+        raise ValueError('Unknown selection kind')
+    doc = App.ActiveDocument
+    if not doc or ws.current_sketch():
+        raise ValueError(tr('スケッチ編集を終了し、文書を開いてください。', 'Finish sketch editing and open a document.'))
+    objects = [obj for obj in export_tools.visible_objects(doc)
+               if (model_mesh.is_mesh(obj) if kind == 'mesh' else hasattr(obj, 'Shape') and bool(obj.Shape.Solids))]
+    if not objects:
+        raise ValueError(tr('表示中のメッシュがありません。', 'No visible meshes.') if kind == 'mesh'
+                         else tr('表示中のソリッドがありません。', 'No visible solids.'))
+    Gui.Selection.clearSelection()
+    for obj in objects:
+        Gui.Selection.addSelection(obj)
+    ws.main.statusBar().showMessage(tr('%d個を選択しました。', 'Selected %d objects.') % len(objects), 5000)
+    return objects
+
+
+def invert_visible(ws):
+    import export_tools
+    import model_mesh
+    from browser import body_owner
+    doc=App.ActiveDocument
+    if not doc or ws.current_sketch():
+        raise ValueError(tr('スケッチ編集を終了し、文書を開いてください。','Finish sketch editing and open a document.'))
+    objects=[obj for obj in export_tools.visible_objects(doc)
+             if model_mesh.is_mesh(obj) or (hasattr(obj,'Shape') and bool(obj.Shape.Solids))]
+    if not objects:
+        raise ValueError(tr('表示中のソリッドまたはメッシュがありません。','No visible solids or meshes.'))
+    selected={body_owner(obj).Name for obj in Gui.Selection.getSelection() if obj.Document==doc}
+    result=[obj for obj in objects if obj.Name not in selected]
+    Gui.Selection.clearSelection()
+    for obj in result:Gui.Selection.addSelection(obj)
+    ws.main.statusBar().showMessage(tr('%d個を選択しました。','Selected %d objects.')%len(result),5000)
+    return result
+
+
+def insert_native_document(ws):
+    import model
+    doc = App.ActiveDocument
+    if not doc or ws.current_sketch() or Gui.Control.activeDialog():
+        raise ValueError(tr('文書を開き、編集中の操作を終了してください。','Open a document and finish the active edit.'))
+    if any(getattr(panel, 'active', False) for panel in vars(ws).values()):
+        raise ValueError(tr('編集中の操作を終了してください。','Finish the active operation.'))
+    name = doc.Name
+    filename, _ = W.QFileDialog.getOpenFileName(ws.main, tr('FluxCAD部品を挿入','Insert FluxCAD Part'), '', 'FluxCAD / FreeCAD (*.FCStd)')
+    if not filename:
+        return []
+    if App.ActiveDocument is not doc or App.getDocument(name) is not doc or ws.current_sketch() or Gui.Control.activeDialog():
+        raise ValueError(tr('挿入先が変更されました。やり直してください。','The destination changed. Try again.'))
+    if any(getattr(panel, 'active', False) for panel in vars(ws).values()):
+        raise ValueError(tr('編集中の操作を終了してください。','Finish the active operation.'))
+    if not os.path.isfile(filename) or os.path.splitext(filename)[1].lower() != '.fcstd':
+        raise ValueError(tr('FCStdファイルを選択してください。','Choose an FCStd file.'))
+    if doc.FileName and os.path.normcase(os.path.realpath(doc.FileName)) == os.path.normcase(os.path.realpath(filename)):
+        raise ValueError(tr('現在の文書自身は挿入できません。','Cannot insert the current document into itself.'))
+    before = {obj.Name for obj in doc.Objects}
+    with model.transaction(doc, tr('FluxCAD部品を挿入','Insert FluxCAD Part')):
+        doc.mergeProject(filename)
+        doc.recompute()
+        added = [obj for obj in doc.Objects if obj.Name not in before]
+        if not added:
+            raise ValueError(tr('挿入するオブジェクトがありません。','No objects to insert.'))
+    ws.refresh()
+    return added

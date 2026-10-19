@@ -11,6 +11,12 @@ def label(operation):
 
 
 def solid(obj):
+    if obj:
+        for source in [obj]+obj.OutListRecursive:
+            if ('Invalid' in source.State or
+                    (getattr(source,'FluxSketchProfile',False) and source.Shape.isNull())):
+                raise ValueError(tr('「%s」を更新できません。先にスケッチ領域や参照先を修正してください。',
+                                    'Cannot update "%s". Fix its sketch profile or references first.')%source.Label)
     if (not obj or not hasattr(obj,'Shape') or hasattr(obj,'Mesh') or
             obj.TypeId=='Sketcher::SketchObject' or getattr(obj,'FluxCADInternal',False) or
             getattr(obj,'FluxSplit',False) or 'Invalid' in obj.State):
