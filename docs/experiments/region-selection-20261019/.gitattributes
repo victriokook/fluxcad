@@ -1,0 +1,3 @@
+# Preserve exact evidence hashes across platforms, including patch context.
+* -text whitespace=cr-at-eol
+*.patch whitespace=cr-at-eol,-blank-at-eol

@@ -1,0 +1,84 @@
+--- a/sketch_regions.py
++++ b/sketch_regions.py
+@@ -297,6 +297,8 @@
+ 
+ def nested_regions(sketch, regions):
+     """Add intact nested cells without changing existing material profiles."""
++    if regions and any('inputs' in region and not region.get('network') for region in regions):
++        return crossing_nested_regions(sketch, regions)
+     if not regions or any(region.get('network') or 'inputs' in region for region in regions):
+         return regions
+     wires = sketch.Shape.Wires
+@@ -322,3 +324,27 @@
+         result.append(dict(face=face, edges=[], inputs=[], network=True, nested_cell=True,
+                            key=('NestedRegion%d' % (len(result) - len(regions) + 1),)))
+     return result
++
++
++def crossing_nested_regions(sketch, regions):
++    if not regions:
++        return regions
++    material = regions[0]['face']
++    if len(regions) > 1:
++        material = material.multiFuse([r['face'] for r in regions[1:]])
++    missing = []
++    for cell in _cells(_geometry(sketch)):
++        cell = cell.copy()
++        cell.Placement = sketch.Placement.multiply(cell.Placement)
++        tolerance = max(1e-9, cell.Area * 1e-8)
++        overlap = cell.common(material).Area
++        if overlap <= tolerance:
++            missing.append(cell)
++        elif abs(overlap - cell.Area) > tolerance:
++            raise _reference_error()
++    missing.sort(key=lambda c: (c.CenterOfMass.x, c.CenterOfMass.y, c.CenterOfMass.z, c.Area))
++    result = list(regions)
++    for index, face in enumerate(missing):
++        result.append(dict(face=face, edges=[], inputs=[], network=True, nested_cell=True,
++                           key=('CrossingNestedRegion%d' % (index + 1),)))
++    return result
+--- a/region_picker.py
++++ b/region_picker.py
+@@ -195,8 +195,8 @@
+         graph=Gui.activeDocument().activeView().getSceneGraph()
+         graph.addChild(node)
+         self.overlay=(graph,node)
+-        self.ws.main.statusBar().showMessage(tr('%d 領域を選択：合計 %.2f mm² — Ctrlで追加・解除 / 押し出し E') %
+-                                           (len(entries),sum(e[4].Area for e in entries)),7000)
++        self.ws.main.statusBar().showMessage(tr('%d 領域を選択：合計 %s mm² — Ctrlで追加・解除 / 押し出し E', '%d regions selected: total %s mm² — Ctrl to add/remove / Extrude E') %
++                                           (len(entries),format_region_area(sum(e[4].Area for e in entries))),7000)
+ 
+     def eventFilter(self,widget,event):
+         if getattr(getattr(self.ws,'cube',None),'forwarding',False):
+@@ -250,3 +250,12 @@
+ 
+ # OCC errors inherit RuntimeError in supported FreeCAD builds.
+ PartError = RuntimeError
++
++
++def format_region_area(area):
++    value = float(area)
++    if not math.isfinite(value) or value < 0:
++        raise ValueError('Invalid region area')
++    if 0 < value < 0.01:
++        return format(value, '.6g')
++    return format(value, '.2f')
+--- a/extrude_panel.py
++++ b/extrude_panel.py
+@@ -6,6 +6,7 @@
+ from pivy import coin
+ import model
+ import browser
++from region_picker import format_region_area
+ 
+ 
+ class ExtrudePanel(QtCore.QObject):
+@@ -125,7 +126,7 @@
+         indices = model.profile_indices(regions,[index] if isinstance(index,int) else index)
+         self.profile.clear()
+         for i,region in enumerate(regions):
+-            item = W.QListWidgetItem(tr('領域 %d — %.2f mm²')%(i+1,region['face'].Area))
++            item = W.QListWidgetItem(tr('領域 %d — %s mm²', 'Region %d — %s mm²')%(i+1,format_region_area(region['face'].Area)))
+             item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
+             item.setData(QtCore.Qt.UserRole,i)
+             item.setCheckState(QtCore.Qt.Checked if i in indices else QtCore.Qt.Unchecked)

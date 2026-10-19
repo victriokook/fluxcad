@@ -1,0 +1,271 @@
+{
+  "status": "PASS_SAVED_COMPLEX_UI_MODEL",
+  "scope": "Read-only supplemental native proof, not an API-created model or selection pass",
+  "sha256": "78aafcbe7aea969be137f99d773809df4bcc4dc840002b0e62cccebd170d34bb",
+  "sketches": [
+    {
+      "name": "Sketch",
+      "count": 16,
+      "mapmode": "Deactivated",
+      "support": "None",
+      "z": 0.0,
+      "areas": [
+        2.92,
+        0.7199999999999998,
+        0.11999999999999994,
+        0.7200000000000002,
+        0.6800000000000015,
+        0.11999999999999994
+      ],
+      "keys": [
+        [
+          "Region1"
+        ],
+        [
+          "Region2"
+        ],
+        [
+          "Region3"
+        ],
+        [
+          "Region4"
+        ],
+        [
+          "CrossingNestedRegion1"
+        ],
+        [
+          "CrossingNestedRegion2"
+        ]
+      ],
+      "geometry": [
+        "<Line segment (-2.8,0.8,0) (-2.8,-1.4,0) >",
+        "<Line segment (-2.8,-1.4,0) (-0.4,-1.4,0) >",
+        "<Line segment (-0.4,-1.4,0) (-0.4,0.8,0) >",
+        "<Line segment (-0.4,0.8,0) (-2.8,0.8,0) >",
+        "<Line segment (-2.3,0.3,0) (-2.3,-0.9,0) >",
+        "<Line segment (-2.3,-0.9,0) (-0.9,-0.9,0) >",
+        "<Line segment (-0.9,-0.9,0) (-0.9,0.3,0) >",
+        "<Line segment (-0.9,0.3,0) (-2.3,0.3,0) >",
+        "<Line segment (-1.9,-0.1,0) (-1.9,-0.5,0) >",
+        "<Line segment (-1.9,-0.5,0) (-1.3,-0.5,0) >",
+        "<Line segment (-1.3,-0.5,0) (-1.3,-0.1,0) >",
+        "<Line segment (-1.3,-0.1,0) (-1.9,-0.1,0) >",
+        "<Line segment (-2.6,0.5,0) (-2.6,-0.3,0) >",
+        "<Line segment (-2.6,-0.3,0) (-0.7,-0.3,0) >",
+        "<Line segment (-0.7,-0.3,0) (-0.7,0.5,0) >",
+        "<Line segment (-0.7,0.5,0) (-2.6,0.5,0) >"
+      ],
+      "constraints": [
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Vertical' (0)>",
+        "<Constraint 'Vertical' (2)>",
+        "<Constraint 'Horizontal' (1)>",
+        "<Constraint 'Horizontal' (3)>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Vertical' (4)>",
+        "<Constraint 'Vertical' (6)>",
+        "<Constraint 'Horizontal' (5)>",
+        "<Constraint 'Horizontal' (7)>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Vertical' (8)>",
+        "<Constraint 'Vertical' (10)>",
+        "<Constraint 'Horizontal' (9)>",
+        "<Constraint 'Horizontal' (11)>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Vertical' (12)>",
+        "<Constraint 'Vertical' (14)>",
+        "<Constraint 'Horizontal' (13)>",
+        "<Constraint 'Horizontal' (15)>"
+      ]
+    },
+    {
+      "name": "Sketch001",
+      "count": 9,
+      "mapmode": "FlatFace",
+      "support": "None",
+      "z": 12.0,
+      "areas": [
+        0.03041291281656706,
+        0.04567000911112877,
+        7.338040527403256e-05,
+        0.18488585850871284,
+        6.502193672596959e-05
+      ],
+      "keys": [
+        [
+          "Region1"
+        ],
+        [
+          "Region2"
+        ],
+        [
+          "Region3"
+        ],
+        [
+          "Region4"
+        ],
+        [
+          "CrossingNestedRegion1"
+        ]
+      ],
+      "geometry": [
+        "ArcOfCircle (Radius : 0.0814447, Position : (-1.78, -0.2, 0), Direction : (0, 0, 1), Parameter : (1.5708, 4.71239))",
+        "ArcOfCircle (Radius : 0.0814447, Position : (-1.44, -0.2, 0), Direction : (0, 0, 1), Parameter : (4.71239, 7.85398))",
+        "<Line segment (-1.78,-0.118555,0) (-1.44,-0.118555,0) >",
+        "<Line segment (-1.78,-0.281445,0) (-1.44,-0.281445,0) >",
+        "Circle (Radius : 0.270946, Position : (-1.4, -0.270946, 0), Direction : (0, 0, 1))",
+        "<Line segment (-1.65901,-0.191404,0) (-1.665,-0.191404,0) >",
+        "<Line segment (-1.665,-0.191404,0) (-1.665,-0.214498,0) >",
+        "<Line segment (-1.665,-0.214498,0) (-1.65901,-0.214498,0) >",
+        "<Line segment (-1.65901,-0.214498,0) (-1.65901,-0.191404,0) >"
+      ],
+      "constraints": [
+        "<Constraint 'Tangent'>",
+        "<Constraint 'Tangent'>",
+        "<Constraint 'Tangent'>",
+        "<Constraint 'Tangent'>",
+        "<Constraint 'Equal' (0,1)>",
+        "<Constraint 'Horizontal' (2)>",
+        "<Constraint 'PointOnObject' (4,1)>",
+        "<Constraint 'Tangent'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Horizontal' (5)>",
+        "<Constraint 'Horizontal' (7)>",
+        "<Constraint 'Vertical' (6)>",
+        "<Constraint 'Vertical' (8)>"
+      ]
+    },
+    {
+      "name": "Sketch002",
+      "count": 9,
+      "mapmode": "FlatFace",
+      "support": "None",
+      "z": 12.08,
+      "areas": [
+        0.009802475231997454,
+        0.001464321575002237,
+        0.008356043875000052
+      ],
+      "keys": [
+        [
+          "CurveRegion1"
+        ],
+        [
+          "CurveRegion2"
+        ],
+        [
+          "CurveRegion3"
+        ]
+      ],
+      "geometry": [
+        "<Line segment (-1.63082,0,0) (-1.63082,-0.252634,0) >",
+        "<Line segment (-1.63082,-0.252634,0) (-1.55315,-0.252634,0) >",
+        "<Line segment (-1.55315,-0.252634,0) (-1.55315,0,0) >",
+        "<Line segment (-1.55315,0,0) (-1.63082,0,0) >",
+        "ArcOfCircle (Radius : 0.124945, Position : (-1.58643, -0.111009, 0), Direction : (0, 0, 1), Parameter : (2.0476, 5.09877))",
+        "<Line segment (-1.614,0,0) (-1.614,-0.201715,0) >",
+        "<Line segment (-1.614,-0.201715,0) (-1.57257,-0.201715,0) >",
+        "<Line segment (-1.57257,-0.201715,0) (-1.57257,0,0) >",
+        "<Line segment (-1.57257,0,0) (-1.614,0,0) >"
+      ],
+      "constraints": [
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Vertical' (0)>",
+        "<Constraint 'Vertical' (2)>",
+        "<Constraint 'Horizontal' (1)>",
+        "<Constraint 'Horizontal' (3)>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Coincident'>",
+        "<Constraint 'Vertical' (5)>",
+        "<Constraint 'Vertical' (7)>",
+        "<Constraint 'Horizontal' (6)>",
+        "<Constraint 'Horizontal' (8)>"
+      ]
+    }
+  ],
+  "solids": [
+    {
+      "name": "Extrude",
+      "type": "Part::Extrusion",
+      "volume": 1.4399999999999995,
+      "solid_count": 1,
+      "visible": false
+    },
+    {
+      "name": "Extrude001",
+      "type": "Part::Extrusion",
+      "volume": 0.0007802668660226274,
+      "solid_count": 1,
+      "visible": false
+    },
+    {
+      "name": "ExtrudeOperation",
+      "type": "Part::Cut",
+      "volume": 1.439219795348831,
+      "solid_count": 1,
+      "visible": false
+    },
+    {
+      "name": "Extrude002",
+      "type": "Part::Extrusion",
+      "volume": 0.0036536008909339905,
+      "solid_count": 1,
+      "visible": false
+    },
+    {
+      "name": "ExtrudeOperation001",
+      "type": "Part::Fuse",
+      "volume": 1.4428733925414023,
+      "solid_count": 1,
+      "visible": false
+    },
+    {
+      "name": "Extrude003",
+      "type": "Part::Extrusion",
+      "volume": 0.0003920990092799072,
+      "solid_count": 1,
+      "visible": false
+    },
+    {
+      "name": "ExtrudeOperation002",
+      "type": "Part::Cut",
+      "volume": 1.4426545774017696,
+      "solid_count": 1,
+      "visible": false
+    },
+    {
+      "name": "Extrude004",
+      "type": "Part::Extrusion",
+      "volume": 2.928643150004412e-05,
+      "solid_count": 1,
+      "visible": false
+    },
+    {
+      "name": "ExtrudeOperation003",
+      "type": "Part::Cut",
+      "volume": 1.4426252967074886,
+      "solid_count": 1,
+      "visible": false
+    }
+  ]
+}

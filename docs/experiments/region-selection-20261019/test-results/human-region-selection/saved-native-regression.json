@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "checks": [
+    "Physical UI selected upper-half prism survives fresh full recompute: area0.12mm2, length12mm, volume1.44mm3",
+    "All6 bounded cells extrude; original4 keys retained, added2 distinct persistent profiles",
+    "All6 independent profiles survive save/full reload/recompute",
+    "Intact2/3 nested ellipses retain atomic cells and default annular-hole behavior",
+    "Crossing curved contours retain3 disjoint lens cells"
+  ],
+  "scope": "Supplemental native persistence/geometry regression; physical UI steps recorded separately"
+}

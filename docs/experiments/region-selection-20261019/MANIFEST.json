@@ -1,0 +1,89 @@
+{
+  "status": "PREPARED_AWAITING_DESTINATION_REPOSITORY",
+  "local_version": "0.2.121-alpha",
+  "baseline_sha256": {
+    "sketch_regions.py": "c110fabfb67b2edba1b53f8fead7df716b6f1d73cfff7a163a4c5dd67ac82bad",
+    "region_picker.py": "34aff1d00f299fe198b67aa5db3c5f00b1bcde810ce3ed2e15daca645baa2604",
+    "extrude_panel.py": "5dd6a1152b369425064111a96ee1caeef7cbd97d634d956cd9cf5c333bc33f05"
+  },
+  "files": {
+    "extrude_panel.py": {
+      "bytes": 15671,
+      "sha256": "c5b2cf618d21d3ef3e22e38bbdae361b82d278f446c141241c5e8d84e892b23d"
+    },
+    "PR-BODY.md": {
+      "bytes": 2212,
+      "sha256": "11bafe36025202f2c454d29b690ae2801845ef8905b38de9e9311c509698b8fa"
+    },
+    "region_picker.py": {
+      "bytes": 12365,
+      "sha256": "4fc0b8eb2df655c269f77b089d02bee98e7b25b4132de5543bb73e62adba94da"
+    },
+    "selection-fixes.patch": {
+      "bytes": 3862,
+      "sha256": "e4952f05d96bd65f38c891bcc027386ea29062154d0a680a550099be717ea64f"
+    },
+    "sketch_regions.py": {
+      "bytes": 17635,
+      "sha256": "3febd52a086730b52359e54294df81e1ba0196b15484bd4631aefddc0f0aed6d"
+    },
+    "docs/human-region-selection-experiment.md": {
+      "bytes": 2950,
+      "sha256": "05530a346b22d2b047134c7baae4bcc8c196468acdab80f110620784d17135d3"
+    },
+    "qwen-generation/plastic/20261018T231527Z-crossing-nested-v3.proposed.py": {
+      "bytes": 992,
+      "sha256": "819c3ff127d62eef5d0aa2f28798a4bd86002fa57d9963ca7eb31d060d8c5a33"
+    },
+    "qwen-generation/plastic/20261018T234314Z-tiny-region-area.proposed.py": {
+      "bytes": 248,
+      "sha256": "850cc92fb20a115420bbead7cbe19dcb6615bd6d5bf9d07c42b515cd3e0d8df1"
+    },
+    "test-results/human-region-selection/complex-physical-ui-review.json": {
+      "bytes": 1094,
+      "sha256": "e6eaf6985e7bee07b2b8d42145d8a27c4ab7f9e25805baf60f08f15767ca4897"
+    },
+    "test-results/human-region-selection/complex-saved-native-review.json": {
+      "bytes": 8431,
+      "sha256": "687d0053983a86081a5412cfd7a4e5f6862ccddaefa057509df56bcd862ab4f6"
+    },
+    "test-results/human-region-selection/Complex-UI-Before-AreaFix.FCStd": {
+      "bytes": 46409,
+      "sha256": "a10a598e566e5fb906e70b9e246412483da00a10fe9b1bb65b34d27399e9eb12"
+    },
+    "test-results/human-region-selection/Complex-UI-Final.FCStd": {
+      "bytes": 56724,
+      "sha256": "78aafcbe7aea969be137f99d773809df4bcc4dc840002b0e62cccebd170d34bb"
+    },
+    "test-results/human-region-selection/Nested-Crossing-UI-Fixed.FCStd": {
+      "bytes": 11303,
+      "sha256": "0671eb93a0428e18a247b8addba02735f0a545b086ca0d86323202768e411cb7"
+    },
+    "test-results/human-region-selection/Nested-Crossing-UI-Repro.FCStd": {
+      "bytes": 11242,
+      "sha256": "3158b70f82c42a633ed6d38d6748fe7846c9c01e886a87385253250b8f1cb6da"
+    },
+    "test-results/human-region-selection/physical-ui-review.json": {
+      "bytes": 2412,
+      "sha256": "6b3b8b50eb4f535bf5bb99577d8b9e7e8ee68cb4313e2c502e90774bc9a05045"
+    },
+    "test-results/human-region-selection/saved-native-regression.json": {
+      "bytes": 581,
+      "sha256": "9cae20830f447a5a5576150719d8c9092f5d3327bb5a0c9110e906c67f382cc7"
+    },
+    "test-results/human-region-selection/tiny-area-format-test.json": {
+      "bytes": 384,
+      "sha256": "e5188390e4ff7bbbb22233a156387128a097a35e022199af4dfcae40ab6cf4e3"
+    }
+  },
+  "excluded": [
+    "browser.py",
+    "fluxcad.py",
+    "robot-reproduction",
+    "reference STEP/BRep",
+    "native homes",
+    "backups",
+    "logs",
+    "workspace release index"
+  ]
+}

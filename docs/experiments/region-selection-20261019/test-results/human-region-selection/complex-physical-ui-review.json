@@ -1,0 +1,14 @@
+{
+  "status": "PASS_SCOPED_PHYSICAL_UI_AREA_FEEDBACK",
+  "utc": "2026-10-18T23:52:22.230340+00:00",
+  "input": "Actual Windows mouse/keyboard only for drawing, selection and confirmation; no CAD selection API",
+  "model": "Complex-UI-Final.FCStd",
+  "sketches": 3,
+  "geometry_count": 34,
+  "additional_operations": 4,
+  "operations": "Initial extrusion plus three Cuts and one Join; arcs, tangent slot, circle intersections, tiny rectangle and two FlatFace sketches",
+  "before": "Positive tiny areas displayed as 0.00 mm² in selection status and Extrude list",
+  "after": "Selected arc-bounded 0.00146432 mm² cell; matching status/list; reverse Cut 0.02 mm confirmed, toolbar Undo/Redo and Save",
+  "repeat_scope": "Same click-select, E, operation/direction/depth, Confirm workflow. Camera/coordinates changed; not a same-pixel comparison.",
+  "limits": "No new unselectable cell reproduced in this extension. Inner rectangle shares an outer segment, not an intact nested hole. English fallback static only. Saved native inspection is supplemental, not physical UI evidence."
+}
