@@ -1,5 +1,14 @@
 # FullArcCAD
 
+## Current Windows release — FullArcCAD 0.2.242-alpha
+
+[Download Windows ZIP](https://github.com/victriokook/fluxcad/releases/download/v0.2.242-alpha/FullArcCAD-0.2.242-windows.zip) · [Release and checksums](https://github.com/victriokook/fluxcad/releases/tag/v0.2.242-alpha) · [Windows setup](docs/FullArcCAD-Windows-en.md) · [Linux preview](https://github.com/victriokook/fluxcad/releases/tag/v0.2.242-linux-preview1)
+
+Updated the public Windows distribution from FluxCAD0.2.122 to current accepted FullArcCAD0.2.242. **Extract into a new writable folder and run `Start-FullArcCAD.cmd`.** FreeCAD is separate;tested on Windows/FreeCAD1.1.4. Legacy launchers/settings remain compatible.
+
+343 accepted modules;Japanese/space-path package tests: native19+6 guards,JAEN Qt46 total/18 actual QAction launches,new/legacy PowerShell quoting,all ZIP payload hashes and extraction PASS. **Physical GUI input and full feature coverage NOT TESTED.** Windows ZIP includes pinned cadmpeg/worker/licenses;exact SolidWorks BRep conversion is experimental and not newly tested against user files. Attached Windows/source ZIPs contain the latest implementation;source ZIP omits decoder executables. GitHub automatic source archives remain the old repository application baseline. Current Linux/video/old releases retained.
+
+
 Formerly FluxCAD. A Japanese/English FreeCAD workspace inspired by Fusion-style workflows.
 
 [Watch the introduction on YouTube](https://www.youtube.com/watch?v=yTPC997dG_Y) (@koyo1217)

@@ -1,5 +1,16 @@
 # FullArcCAD
 
+## 最新Windows版 — FullArcCAD 0.2.242-alpha
+
+[Windows ZIPをダウンロード](https://github.com/victriokook/fluxcad/releases/download/v0.2.242-alpha/FullArcCAD-0.2.242-windows.zip) · [リリース・チェックサム](https://github.com/victriokook/fluxcad/releases/tag/v0.2.242-alpha) · [Windows起動手順](docs/FullArcCAD-Windows-ja.md) · [Linux版](https://github.com/victriokook/fluxcad/releases/tag/v0.2.242-linux-preview1)
+
+Windows版も旧FluxCAD0.2.122から最新採用版0.2.242へ更新して公開しました。**新しいフォルダーへ展開して`Start-FullArcCAD.cmd`を実行**してください。FreeCADは別途必要で、パッケージ試験はWindows/FreeCAD1.1.4で実行しています。旧Start-FluxCAD起動ファイルと設定の互換性は保持しました。
+
+採用済み343モジュールから作成し、日本語・空白パスでnative19項目＋拒否6項目、日英Qt合計46項目（実QAction18回）、新旧起動スクリプトの引用・ZIP全payloadハッシュ・展開が合格。**物理GUI入力と全機能網羅は未確認です。** Windows ZIPには固定版cadmpeg変換器と必要なworker・通知を含みますが、SolidWorks厳密BRep変換は実験的で、今回ユーザーの新しいSolidWorksファイルでは試験していません。
+
+リリース添付のWindows ZIP・source ZIPが最新実装です。ソースZIPはdecoder実行ファイルを除外しています。GitHub自動生成Source codeアーカイブは旧リポジトリ基点で別物です。Linux版・紹介動画・旧配布物は保持しています。
+
+
 旧FluxCAD。FreeCADに日本語・英語のリボンとモデリング操作を加えるワークスペースです。製品表示名をFullArcCADに変更しました。
 
 [YouTubeで紹介動画を見る](https://www.youtube.com/watch?v=yTPC997dG_Y)（@koyo1217・怪人ビクトリオの遊び）

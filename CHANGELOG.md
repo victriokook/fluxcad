@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.242-alpha Windows — 2026-10-24
+
+Published the current accepted343-module Windows/source ZIPs with FullArcCAD branding,compatible launchers,pinned decoder/licenses and55 public examples. WindowsFreeCAD1.1.4 selected package tests native19+6/JAENQt46total/18actualQAction,launcher quoting,ZIP hashes and extraction PASS. Physical GUI/full feature coverage untested. Linux0.2.242 and previousWindows releases retained. See [Windows scope](docs/releases/0.2.242-alpha-windows.md).
+
+
 ## 0.2.242-linux-preview1 — 2026-10-24
 
 Renamed display to FullArcCAD;new current Linux preview with343 accepted modules,coordinate points/axes and mesh tools. RealLinux selected native199+76/JAENQt78 total/launcher18 PASS;physical GUI untested. Includes new72-second Japanese-caption introduction. Previous public assets retained;current implementation is in attached tar.gz. See [release scope](docs/releases/0.2.242-linux-preview1.md).
