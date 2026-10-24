@@ -2,6 +2,8 @@
 
 Formerly FluxCAD. A Japanese/English FreeCAD workspace inspired by Fusion-style workflows.
 
+[Watch the introduction on YouTube](https://www.youtube.com/watch?v=yTPC997dG_Y) (@koyo1217)
+
 ## Current Linux preview — 0.2.242-linux-preview1
 
 [Download Linux package](https://github.com/victriokook/fluxcad/releases/tag/v0.2.242-linux-preview1) · [English setup](docs/FullArcCAD-Linux-en.md) · [Japanese](README.md) · [72-second captioned introduction](https://github.com/victriokook/fluxcad/releases/download/v0.2.242-linux-preview1/FullArcCAD-Linux-Introduction-ja.mp4)

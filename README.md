@@ -2,6 +2,8 @@
 
 旧FluxCAD。FreeCADに日本語・英語のリボンとモデリング操作を加えるワークスペースです。製品表示名をFullArcCADに変更しました。
 
+[YouTubeで紹介動画を見る](https://www.youtube.com/watch?v=yTPC997dG_Y)（@koyo1217・怪人ビクトリオの遊び）
+
 ## 最新Linux版 — 0.2.242-linux-preview1
 
 [Linux版をダウンロード](https://github.com/victriokook/fluxcad/releases/tag/v0.2.242-linux-preview1) · [日本語起動手順](docs/FullArcCAD-Linux-ja.md) · [English](README-en.md) · [72秒の紹介動画MP4](https://github.com/victriokook/fluxcad/releases/download/v0.2.242-linux-preview1/FullArcCAD-Linux-Introduction-ja.mp4)
