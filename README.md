@@ -1,25 +1,28 @@
-# FluxCAD
+# FullArcCAD
 
-FreeCADに日本語・英語のリボンとモデリング操作を加えるワークスペースです。Windows向けアルファ版に加え、Linux x86_64向け試作版を公開しています。
+旧FluxCAD。FreeCADに日本語・英語のリボンとモデリング操作を加えるワークスペースです。製品表示名をFullArcCADに変更しました。
 
-[English](README-en.md) · [操作ガイド](docs/User-guide-ja.md) · [変更履歴](CHANGELOG.md)
+## 最新Linux版 — 0.2.242-linux-preview1
 
-**Windows公開版: 0.2.122-alpha（2026-10-19）。Linux試作版: 0.2.234-linux-preview1（2026-10-22）。** 旧0.1.0-alpha用の差分パッチではありません。完成保証のある製品ではなく、試用・検証向けアルファ版です。
+[Linux版をダウンロード](https://github.com/victriokook/fluxcad/releases/tag/v0.2.242-linux-preview1) · [日本語起動手順](docs/FullArcCAD-Linux-ja.md) · [English](README-en.md) · [72秒の紹介動画MP4](https://github.com/victriokook/fluxcad/releases/download/v0.2.242-linux-preview1/FullArcCAD-Linux-Introduction-ja.mp4)
 
-## Linux試作版
+Linux x86_64用の試作版です。FullArcCADロゴ修正、座標で構築点、座標と方向で構築軸、CADからメッシュ作成・検査・細分化・成分除去・面削除など、採用済み0.2.242-alphaの実ファイル343 Pythonモジュールを基に作成しています。
 
-[Linux版のダウンロード](https://github.com/victriokook/fluxcad/releases/tag/v0.2.234-linux-preview1) · [Linux起動手順](docs/Linux-preview-ja.md)
+```sh
+tar -xzf FullArcCAD-0.2.242-linux-preview1.tar.gz
+cd FullArcCAD-0.2.242-linux-preview1
+sh Start-FullArcCAD.sh --freecad /absolute/path/to/FreeCAD.AppImage --language ja
+```
 
-Linux x86_64 / FreeCAD 1.1.3で、起動処理18試験、native66項目＋拒否12項目、CAD演算・保存15項目＋拒否6項目、日英Qt各16項目（各10回の実QAction）に合格しました。Ubuntu 24.04コンテナ／Xvfb／Mesaでの検証です。**物理GUI、Wayland/GPU/高DPI、全機能・全ディストリビューションは未確認です。**
+FreeCAD・Python3・フォントは別途必要です。公式FreeCAD1.1.3 / Ubuntu24.04コンテナ + Xvfb + Mesaで、native・連携199項目＋拒否76項目、日英Qt合計78項目（実QAction38回）、起動処理18試験が合格。**物理GUI入力・Wayland・実GPU・高DPI・他ディストリビューションは未確認。全機能網羅・Windows/Linux完全同等性は保証しません。** SolidWorks厳密BRep変換はLinux未対応で明示拒否します。
 
-| 配布 | バージョン・起動 | 検証と主な制限 |
-|---|---|---|
-| Windows | [0.2.122-alpha](https://github.com/victriokook/fluxcad/releases/tag/v0.2.122-alpha)、`Start-FluxCAD.cmd` | 従来の公開版。下記のWindows検証記録を参照 |
-| Linux試作 | [0.2.234-linux-preview1](https://github.com/victriokook/fluxcad/releases/tag/v0.2.234-linux-preview1)、`sh Start-FluxCAD.sh --freecad /path/to/FreeCAD.AppImage --language ja` | 選択したnative・日英Qt試験合格。物理GUI未確認。SolidWorks厳密BRep取込は未対応 |
+動画はLinux仮想画面をAPIで操作した自動デモと日本語字幕です。物理操作の録画ではありません。ユーザーCAD・個人データ・外部音楽は含みません。
 
-Linux版は採用済み0.2.234-alphaの実ファイル321 Pythonモジュールを基にした別配布です。localQwen生成の起動処理をレビューし、フォント検出と設定分離を追加しました。FreeCAD・フォントは別途必要です。**添付tar.gzがLinux実装ソース一式を含む配布物です。GitHubの自動生成Source codeアーカイブやmainのWindows用起動手順とは区別してください。** Windows版との全機能同等性は保証しません。
+**添付`FullArcCAD-0.2.242-linux-preview1.tar.gz`が最新Linux実装ソース一式です。GitHubの自動生成Source codeアーカイブとmainのアプリコードは旧Windows公開基点であり、最新Linux配布とは別です。** Windows公開版0.2.122-alpha、旧Linux0.2.234の配布物は保持しています。旧設定・保存形式・環境変数のFluxCAD識別子は互換性のため維持。
 
-## Windows版の起動
+## 従来のWindows公開版
+
+### Windows版の起動
 
 1. FreeCADを別途インストールします。今回の検証環境はWindows / FreeCAD 1.1.4です。
 2. [Releases](https://github.com/victriokook/fluxcad/releases)から `FluxCAD-v0.2.122-alpha-windows.zip` を取得し、書き込み可能な新しいフォルダへ展開します。旧版フォルダへの上書きは避けてください。

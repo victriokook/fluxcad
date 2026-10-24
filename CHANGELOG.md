@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.242-linux-preview1 — 2026-10-24
+
+Renamed display to FullArcCAD;new current Linux preview with343 accepted modules,coordinate points/axes and mesh tools. RealLinux selected native199+76/JAENQt78 total/launcher18 PASS;physical GUI untested. Includes new72-second Japanese-caption introduction. Previous public assets retained;current implementation is in attached tar.gz. See [release scope](docs/releases/0.2.242-linux-preview1.md).
+
+
 ## 0.2.234-linux-preview1 — 2026-10-22
 
 Experimental Linux x86_64 package based on accepted 0.2.234-alpha, separately from the Windows 0.2.122 public baseline. Local-Qwen launcher, isolated settings, local font discovery, explicit refusal of Windows-only exact SolidWorks BRep conversion. Linux FreeCAD1.1.3: launcher18/native66+12/integration15+6/JAENQt16each PASS under Ubuntu24.04+Xvfb+Mesa. Physical desktop/GPU/Wayland/high-DPI and full feature parity untested. See [Linux release scope](docs/releases/0.2.234-linux-preview1.md).

@@ -1,25 +1,28 @@
-# FluxCAD
+# FullArcCAD
 
-A Japanese/English workspace for FreeCAD with compact ribbon and modeling tools. Available as a Windows alpha and an experimental Linux x86_64 preview.
+Formerly FluxCAD. A Japanese/English FreeCAD workspace inspired by Fusion-style workflows.
 
-[日本語](README.md) · [User guide](docs/User-guide-en.md) · [Changelog](CHANGELOG.md)
+## Current Linux preview — 0.2.242-linux-preview1
 
-**Windows public release: 0.2.122-alpha (2026-10-19). Linux preview: 0.2.234-linux-preview1 (2026-10-22).** The Windows release is a public baseline, replacing the old 0.1 preview as the development baseline. This remains an alpha, not a claim that every feature or workflow is complete.
+[Download Linux package](https://github.com/victriokook/fluxcad/releases/tag/v0.2.242-linux-preview1) · [English setup](docs/FullArcCAD-Linux-en.md) · [Japanese](README.md) · [72-second captioned introduction](https://github.com/victriokook/fluxcad/releases/download/v0.2.242-linux-preview1/FullArcCAD-Linux-Introduction-ja.mp4)
 
-## Linux preview
+Linux x86_64 preview built from actual accepted0.2.242-alpha files (343 Python modules). Includes FullArcCAD branding, coordinate construction points/axes and current mesh tools. Requires separately installed official FreeCAD (tested1.1.3),Python3 and local fonts.
 
-[Download Linux preview](https://github.com/victriokook/fluxcad/releases/tag/v0.2.234-linux-preview1) · [Linux setup](docs/Linux-preview-en.md)
+```sh
+tar -xzf FullArcCAD-0.2.242-linux-preview1.tar.gz
+cd FullArcCAD-0.2.242-linux-preview1
+sh Start-FullArcCAD.sh --freecad /absolute/path/to/FreeCAD.AppImage --language en
+```
 
-Tested on Linux x86_64 / FreeCAD 1.1.3 in an Ubuntu 24.04 container with Xvfb and Mesa: 18 launcher tests, 66 native cases + 12 guards, 15 CAD integration/save cases + 6 guards, and 16 Japanese/English Qt cases each (10 actual QAction launches per language). **Physical GUI input, Wayland/GPU/high-DPI, full feature coverage and other distributions remain untested.**
+Ubuntu24.04+Xvfb+Mesa: native/integration199+76 guards,JA/EN Qt78 total (38 actual QAction launches),launcher18 PASS. **Physical GUI input,Wayland,real GPU,high DPI,other distributions and full feature coverage NOT TESTED.** Exact SolidWorks BRep conversion is explicitly unavailable on Linux. No full Windows/Linux parity claim.
 
-| Distribution | Version and launch | Validation and limits |
-|---|---|---|
-| Windows | [0.2.122-alpha](https://github.com/victriokook/fluxcad/releases/tag/v0.2.122-alpha), `Start-FluxCAD.cmd` | Existing public release; see its scoped evidence below |
-| Linux preview | [0.2.234-linux-preview1](https://github.com/victriokook/fluxcad/releases/tag/v0.2.234-linux-preview1), `sh Start-FluxCAD.sh --freecad /path/to/FreeCAD.AppImage --language en` | Selected native and Japanese/English Qt tests passed; physical GUI untested; exact SolidWorks BRep import unavailable |
+The video uses actual Linux virtual-display screenshots/API-driven synthetic model frames with Japanese captions,not physical interaction. No user CAD/private data/external music included.
 
-The Linux package is based on the actual accepted 0.2.234-alpha snapshot of 321 Python modules. A local-Qwen-generated launcher was reviewed, with local font detection and isolated settings added. FreeCAD and fonts are separate. **The attached tar.gz contains the complete Linux implementation source. GitHub's automatic Source code archives and main's Windows launch instructions are separate.** Full Windows/Linux feature parity is not claimed.
+**The attached `FullArcCAD-0.2.242-linux-preview1.tar.gz` contains the complete latest Linux implementation. GitHub automatic Source code archives/main app code remain the old Windows public baseline and are separate.** Existing Windows0.2.122 and Linux0.2.234 assets are retained. Legacy FluxCAD preference/serialization/environment identifiers remain compatible.
 
-## Windows start
+## Previous Windows public release
+
+### Windows start
 
 Install FreeCAD separately (tested here on Windows / FreeCAD 1.1.4). Download `FluxCAD-v0.2.122-alpha-windows.zip` from [Releases](https://github.com/victriokook/fluxcad/releases), extract into a new writable directory, then run `Start-FluxCAD.cmd`. Use `Start-FluxCAD.ps1 -FreeCADPath "C:\path\to\FreeCAD\bin\FreeCAD.exe"` to choose a runtime. Open an example working copy from File, or try `samples/Sample.FCStd`. Save work separately.
 
